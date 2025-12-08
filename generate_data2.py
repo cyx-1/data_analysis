@@ -5,6 +5,18 @@ from datetime import datetime, timedelta
 # Generate 100 dummy data points for a different team/project
 users = ['Frank', 'Grace', 'Henry', 'Isabel', 'Jack']
 workflows = ['API Testing', 'Database Migration', 'Security Scan', 'Code Review', 'Deployment']
+teams = ['Platform', 'Security', 'DevOps', 'QA']
+titles = ['Software Engineer', 'Security Engineer', 'QA Lead', 'DevOps Specialist', 'Platform Engineer']
+locations = ['Seattle', 'Austin', 'Berlin', 'Singapore', 'Remote']
+
+# User profiles with consistent attributes
+user_profiles = {
+    'Frank': {'team': 'Platform', 'title': 'Platform Engineer', 'location': 'Seattle'},
+    'Grace': {'team': 'Security', 'title': 'Security Engineer', 'location': 'Berlin'},
+    'Henry': {'team': 'DevOps', 'title': 'DevOps Specialist', 'location': 'Austin'},
+    'Isabel': {'team': 'QA', 'title': 'QA Lead', 'location': 'Remote'},
+    'Jack': {'team': 'Platform', 'title': 'Software Engineer', 'location': 'Singapore'}
+}
 
 start_date = datetime(2025, 12, 1)
 data = []
@@ -25,12 +37,15 @@ for i in range(100):
         'workflow_name': workflow,
         'timestamp': timestamp.strftime('%Y-%m-%d %H:%M:%S'),
         'duration': duration,
-        'correlation_id': correlation_id
+        'correlation_id': correlation_id,
+        'team': user_profiles[user]['team'],
+        'title': user_profiles[user]['title'],
+        'location': user_profiles[user]['location']
     })
 
 # Write to CSV
 with open('workflow_data2.csv', 'w', newline='') as f:
-    writer = csv.DictWriter(f, fieldnames=['user_name', 'workflow_name', 'timestamp', 'duration', 'correlation_id'])
+    writer = csv.DictWriter(f, fieldnames=['user_name', 'workflow_name', 'timestamp', 'duration', 'correlation_id', 'team', 'title', 'location'])
     writer.writeheader()
     writer.writerows(data)
 
