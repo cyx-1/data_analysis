@@ -110,6 +110,19 @@ html_content = f'''<!DOCTYPE html>
             flex: 1;
             user-select: none;
         }}
+        .filter-select {{
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            background: white;
+        }}
+        .filter-select:focus {{
+            outline: none;
+            border-color: #007bff;
+        }}
         .filter-actions {{
             display: flex;
             gap: 8px;
@@ -165,16 +178,22 @@ html_content = f'''<!DOCTYPE html>
         </div>
         <div class="filters-container">
             <div class="filter-section">
-                <h3>📁 Datasets</h3>
-                <div class="filter-options" id="dataset-filters"></div>
+                <h3>📁 Dataset</h3>
+                <select id="dataset-select" class="filter-select" onchange="applyFilters()">
+                </select>
+            </div>
+
+            <div class="filter-section">
+                <h3>👥 Users</h3>
+                <div class="filter-options" id="user-filters"></div>
                 <div class="filter-actions">
-                    <button class="btn" onclick="selectAllDatasets()">All</button>
-                    <button class="btn" onclick="clearAllDatasets()">None</button>
+                    <button class="btn" onclick="selectAllUsers()">All</button>
+                    <button class="btn" onclick="clearAllUsers()">None</button>
                 </div>
             </div>
 
             <div class="filter-section">
-                <h3>👥 Teams</h3>
+                <h3>🏢 Teams</h3>
                 <div class="filter-options" id="team-filters"></div>
                 <div class="filter-actions">
                     <button class="btn" onclick="selectAllTeams()">All</button>
@@ -200,12 +219,8 @@ html_content = f'''<!DOCTYPE html>
                 </div>
             </div>
 
-            <button class="btn btn-primary" onclick="applyFilters()" style="width: 100%; margin-top: 15px;">
-                Apply Filters
-            </button>
-
             <div class="info-text">
-                💡 Select multiple items in each category, then click "Apply Filters".
+                💡 Filters update dynamically as you select/deselect items.
                 Viewport stays fixed when filtering.
             </div>
         </div>
@@ -228,10 +243,19 @@ html_content = f'''<!DOCTYPE html>
 
         // Initialize filter checkboxes
         function initializeFilters() {{
-            // Dataset filters
-            const datasetContainer = document.getElementById('dataset-filters');
+            // Dataset dropdown
+            const datasetSelect = document.getElementById('dataset-select');
             CSV_FILES.forEach(file => {{
-                datasetContainer.appendChild(createCheckbox(file, 'dataset', true));
+                const option = document.createElement('option');
+                option.value = file;
+                option.textContent = file;
+                datasetSelect.appendChild(option);
+            }});
+
+            // User filters
+            const userContainer = document.getElementById('user-filters');
+            USERS.forEach(user => {{
+                userContainer.appendChild(createCheckbox(user, 'user', true));
             }});
 
             // Team filters
@@ -264,6 +288,9 @@ html_content = f'''<!DOCTYPE html>
             checkbox.dataset.type = type;
             checkbox.dataset.value = value;
 
+            // Auto-update on change
+            checkbox.onchange = applyFilters;
+
             const label = document.createElement('label');
             label.htmlFor = checkbox.id;
             label.textContent = value;
@@ -275,6 +302,7 @@ html_content = f'''<!DOCTYPE html>
             div.onclick = (e) => {{
                 if (e.target !== checkbox) {{
                     checkbox.checked = !checkbox.checked;
+                    applyFilters();
                 }}
             }};
 
@@ -282,29 +310,37 @@ html_content = f'''<!DOCTYPE html>
         }}
 
         // Filter selection functions
-        function selectAllDatasets() {{
-            document.querySelectorAll('[data-type="dataset"]').forEach(cb => cb.checked = true);
+        function selectAllUsers() {{
+            document.querySelectorAll('[data-type="user"]').forEach(cb => cb.checked = true);
+            applyFilters();
         }}
-        function clearAllDatasets() {{
-            document.querySelectorAll('[data-type="dataset"]').forEach(cb => cb.checked = false);
+        function clearAllUsers() {{
+            document.querySelectorAll('[data-type="user"]').forEach(cb => cb.checked = false);
+            applyFilters();
         }}
         function selectAllTeams() {{
             document.querySelectorAll('[data-type="team"]').forEach(cb => cb.checked = true);
+            applyFilters();
         }}
         function clearAllTeams() {{
             document.querySelectorAll('[data-type="team"]').forEach(cb => cb.checked = false);
+            applyFilters();
         }}
         function selectAllTitles() {{
             document.querySelectorAll('[data-type="title"]').forEach(cb => cb.checked = true);
+            applyFilters();
         }}
         function clearAllTitles() {{
             document.querySelectorAll('[data-type="title"]').forEach(cb => cb.checked = false);
+            applyFilters();
         }}
         function selectAllLocations() {{
             document.querySelectorAll('[data-type="location"]').forEach(cb => cb.checked = true);
+            applyFilters();
         }}
         function clearAllLocations() {{
             document.querySelectorAll('[data-type="location"]').forEach(cb => cb.checked = false);
+            applyFilters();
         }}
 
         // Load CSV files
@@ -351,8 +387,10 @@ html_content = f'''<!DOCTYPE html>
 
         // Get selected filter values
         function getSelectedFilters() {{
+            const datasetSelect = document.getElementById('dataset-select');
             return {{
-                datasets: Array.from(document.querySelectorAll('[data-type="dataset"]:checked'))
+                dataset: datasetSelect.value,
+                users: Array.from(document.querySelectorAll('[data-type="user"]:checked'))
                     .map(cb => cb.dataset.value),
                 teams: Array.from(document.querySelectorAll('[data-type="team"]:checked'))
                     .map(cb => cb.dataset.value),
@@ -369,7 +407,8 @@ html_content = f'''<!DOCTYPE html>
 
             // Filter data
             const filteredData = allData.filter(row => {{
-                return filters.datasets.includes(row._dataset) &&
+                return row._dataset === filters.dataset &&
+                       filters.users.includes(row.user_name) &&
                        filters.teams.includes(row.team) &&
                        filters.titles.includes(row.title) &&
                        filters.locations.includes(row.location);
@@ -420,7 +459,6 @@ html_content = f'''<!DOCTYPE html>
             }});
 
             const layout = {{
-                title: 'Workflow Execution Dashboard',
                 xaxis: {{
                     title: 'Execution Time',
                     range: globalAxisRanges.xaxis
@@ -430,12 +468,10 @@ html_content = f'''<!DOCTYPE html>
                     range: globalAxisRanges.yaxis
                 }},
                 hovermode: 'closest',
-                showlegend: true,
-                legend: {{
-                    title: {{ text: 'User (click to toggle)' }}
-                }},
+                showlegend: false,
                 template: 'plotly_white',
-                height: 700
+                height: 700,
+                margin: {{ t: 20 }}
             }};
 
             const config = {{
