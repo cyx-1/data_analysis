@@ -1,7 +1,6 @@
 import pandas as pd
-import plotly.graph_objects as go
 from pathlib import Path
-import plotly.express as px
+import json
 
 # Find all CSV files matching the pattern
 csv_files = sorted(Path('.').glob('workflow_data*.csv'))
@@ -14,377 +13,481 @@ print(f"Found {len(csv_files)} CSV file(s):")
 for f in csv_files:
     print(f"  • {f.name}")
 
-# Read and process all CSV files
-datasets = {}
-for csv_file in csv_files:
-    df = pd.read_csv(csv_file)
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    df = df.sort_values('timestamp')
-    datasets[csv_file.name] = df
-
-# Collect all unique values for filters across all datasets
+# Read CSV files to extract metadata for filter options
 all_teams = set()
 all_titles = set()
 all_locations = set()
-all_workflows = set()
 all_users = set()
+csv_file_names = [f.name for f in csv_files]
 
-for df in datasets.values():
+for csv_file in csv_files:
+    df = pd.read_csv(csv_file)
     all_teams.update(df['team'].unique())
     all_titles.update(df['title'].unique())
     all_locations.update(df['location'].unique())
-    all_workflows.update(df['workflow_name'].unique())
     all_users.update(df['user_name'].unique())
 
 all_teams = sorted(all_teams)
 all_titles = sorted(all_titles)
 all_locations = sorted(all_locations)
-all_workflows = sorted(all_workflows)
 all_users = sorted(all_users)
 
-# Calculate global axis ranges for viewport preservation
-all_timestamps = []
-all_durations = []
-for df in datasets.values():
-    all_timestamps.extend(df['timestamp'].tolist())
-    all_durations.extend(df['duration'].tolist())
+# Generate HTML with embedded JavaScript
+html_content = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workflow Execution Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }}
+        .container {{
+            display: flex;
+            gap: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }}
+        .chart-container {{
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        .filters-container {{
+            width: 280px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }}
+        .filter-section {{
+            margin-bottom: 25px;
+        }}
+        .filter-section h3 {{
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }}
+        .filter-options {{
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 8px;
+        }}
+        .filter-option {{
+            display: flex;
+            align-items: center;
+            padding: 6px 8px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: background 0.2s;
+        }}
+        .filter-option:hover {{
+            background: #f0f0f0;
+        }}
+        .filter-option input[type="checkbox"] {{
+            margin-right: 8px;
+            cursor: pointer;
+        }}
+        .filter-option label {{
+            cursor: pointer;
+            font-size: 13px;
+            flex: 1;
+            user-select: none;
+        }}
+        .filter-actions {{
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }}
+        .btn {{
+            padding: 6px 12px;
+            font-size: 12px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }}
+        .btn:hover {{
+            background: #f0f0f0;
+            border-color: #999;
+        }}
+        .btn-primary {{
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }}
+        .btn-primary:hover {{
+            background: #0056b3;
+            border-color: #0056b3;
+        }}
+        #plot {{
+            width: 100%;
+            height: 700px;
+        }}
+        .info-text {{
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }}
+        h1 {{
+            text-align: center;
+            color: #333;
+            margin: 0 0 20px 0;
+            font-size: 28px;
+        }}
+    </style>
+</head>
+<body>
+    <h1>Workflow Execution Dashboard</h1>
+    <div class="container">
+        <div class="chart-container">
+            <div id="plot"></div>
+        </div>
+        <div class="filters-container">
+            <div class="filter-section">
+                <h3>📁 Datasets</h3>
+                <div class="filter-options" id="dataset-filters"></div>
+                <div class="filter-actions">
+                    <button class="btn" onclick="selectAllDatasets()">All</button>
+                    <button class="btn" onclick="clearAllDatasets()">None</button>
+                </div>
+            </div>
 
-# Add padding to ranges
-time_range = [min(all_timestamps), max(all_timestamps)]
-time_padding = (time_range[1] - time_range[0]) * 0.05
-time_range = [time_range[0] - time_padding, time_range[1] + time_padding]
+            <div class="filter-section">
+                <h3>👥 Teams</h3>
+                <div class="filter-options" id="team-filters"></div>
+                <div class="filter-actions">
+                    <button class="btn" onclick="selectAllTeams()">All</button>
+                    <button class="btn" onclick="clearAllTeams()">None</button>
+                </div>
+            </div>
 
-duration_range = [min(all_durations), max(all_durations)]
-duration_padding = (duration_range[1] - duration_range[0]) * 0.05
-duration_range = [duration_range[0] - duration_padding, duration_range[1] + duration_padding]
+            <div class="filter-section">
+                <h3>💼 Titles</h3>
+                <div class="filter-options" id="title-filters"></div>
+                <div class="filter-actions">
+                    <button class="btn" onclick="selectAllTitles()">All</button>
+                    <button class="btn" onclick="clearAllTitles()">None</button>
+                </div>
+            </div>
 
-# Create color mapping for users
-color_map = {user: px.colors.qualitative.Set1[i % len(px.colors.qualitative.Set1)]
-             for i, user in enumerate(all_users)}
+            <div class="filter-section">
+                <h3>📍 Locations</h3>
+                <div class="filter-options" id="location-filters"></div>
+                <div class="filter-actions">
+                    <button class="btn" onclick="selectAllLocations()">All</button>
+                    <button class="btn" onclick="clearAllLocations()">None</button>
+                </div>
+            </div>
 
-# Create figure
-fig = go.Figure()
+            <button class="btn btn-primary" onclick="applyFilters()" style="width: 100%; margin-top: 15px;">
+                Apply Filters
+            </button>
 
-# Store trace metadata for filtering
-trace_metadata = []
+            <div class="info-text">
+                💡 Select multiple items in each category, then click "Apply Filters".
+                Viewport stays fixed when filtering.
+            </div>
+        </div>
+    </div>
 
-# Create traces for each dataset and user combination
-for dataset_idx, (csv_name, df) in enumerate(datasets.items()):
-    users = df['user_name'].unique()
+    <script>
+        const CSV_FILES = {json.dumps(csv_file_names)};
+        const TEAMS = {json.dumps(all_teams)};
+        const TITLES = {json.dumps(all_titles)};
+        const LOCATIONS = {json.dumps(all_locations)};
+        const USERS = {json.dumps(all_users)};
 
-    for user in users:
-        user_df = df[df['user_name'] == user]
+        const COLOR_PALETTE = [
+            '#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00',
+            '#ffff33', '#a65628', '#f781bf', '#999999', '#66c2a5'
+        ];
 
-        # Get user attributes
-        team = user_df['team'].iloc[0]
-        title = user_df['title'].iloc[0]
-        location = user_df['location'].iloc[0]
+        let allData = [];
+        let globalAxisRanges = null;
 
-        # Create custom data for hover with all attributes
-        customdata = user_df[['user_name', 'workflow_name', 'correlation_id', 'team', 'title', 'location']].values
+        // Initialize filter checkboxes
+        function initializeFilters() {{
+            // Dataset filters
+            const datasetContainer = document.getElementById('dataset-filters');
+            CSV_FILES.forEach(file => {{
+                datasetContainer.appendChild(createCheckbox(file, 'dataset', true));
+            }});
 
-        trace = go.Scatter(
-            x=user_df['timestamp'],
-            y=user_df['duration'],
-            mode='markers',
-            name=user,
-            marker=dict(
-                size=10,
-                color=color_map.get(user, '#000000'),
-                line=dict(width=1, color='white'),
-                opacity=0.8
-            ),
-            customdata=customdata,
-            hovertemplate='<b>%{customdata[1]}</b><br>' +
-                         'User: %{customdata[0]}<br>' +
-                         'Team: %{customdata[3]}<br>' +
-                         'Title: %{customdata[4]}<br>' +
-                         'Location: %{customdata[5]}<br>' +
-                         'Time: %{x|%Y-%m-%d %H:%M:%S}<br>' +
-                         'Duration: %{y:.2f}s<br>' +
-                         'Correlation ID: %{customdata[2]}<br>' +
-                         '<extra></extra>',
-            visible=(dataset_idx == 0),  # Only first dataset visible initially
-        )
-        fig.add_trace(trace)
+            // Team filters
+            const teamContainer = document.getElementById('team-filters');
+            TEAMS.forEach(team => {{
+                teamContainer.appendChild(createCheckbox(team, 'team', true));
+            }});
 
-        # Store metadata for filtering
-        trace_metadata.append({
-            'dataset': csv_name,
-            'user': user,
-            'team': team,
-            'title': title,
-            'location': location
-        })
+            // Title filters
+            const titleContainer = document.getElementById('title-filters');
+            TITLES.forEach(title => {{
+                titleContainer.appendChild(createCheckbox(title, 'title', true));
+            }});
 
-# Helper function to create visibility list based on filters
-def create_visibility(dataset_filter=None, team_filter=None, title_filter=None, location_filter=None):
-    visibility = []
-    for meta in trace_metadata:
-        visible = True
-        if dataset_filter and meta['dataset'] != dataset_filter:
-            visible = False
-        if team_filter and team_filter != 'All' and meta['team'] != team_filter:
-            visible = False
-        if title_filter and title_filter != 'All' and meta['title'] != title_filter:
-            visible = False
-        if location_filter and location_filter != 'All' and meta['location'] != location_filter:
-            visible = False
-        visibility.append(visible)
-    return visibility
+            // Location filters
+            const locationContainer = document.getElementById('location-filters');
+            LOCATIONS.forEach(location => {{
+                locationContainer.appendChild(createCheckbox(location, 'location', true));
+            }});
+        }}
 
-# Create dataset dropdown buttons
-dataset_buttons = []
-for csv_name in datasets.keys():
-    visible = create_visibility(dataset_filter=csv_name)
-    button = dict(
-        label=csv_name,
-        method='update',
-        args=[
-            {'visible': visible},
-            {
-                'title': f'Workflow Execution Dashboard - {csv_name}',
-                'xaxis.range': time_range,
-                'yaxis.range': duration_range
-            }
-        ]
-    )
-    dataset_buttons.append(button)
+        function createCheckbox(value, type, checked = true) {{
+            const div = document.createElement('div');
+            div.className = 'filter-option';
 
-# Create team filter buttons
-team_buttons = [dict(
-    label='All Teams',
-    method='update',
-    args=[
-        {'visible': create_visibility(dataset_filter=list(datasets.keys())[0])},
-        {'xaxis.range': time_range, 'yaxis.range': duration_range}
-    ]
-)]
-for team in all_teams:
-    visible = create_visibility(dataset_filter=list(datasets.keys())[0], team_filter=team)
-    button = dict(
-        label=team,
-        method='update',
-        args=[
-            {'visible': visible},
-            {'xaxis.range': time_range, 'yaxis.range': duration_range}
-        ]
-    )
-    team_buttons.append(button)
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `${{type}}-${{value}}`;
+            checkbox.checked = checked;
+            checkbox.dataset.type = type;
+            checkbox.dataset.value = value;
 
-# Create title filter buttons
-title_buttons = [dict(
-    label='All Titles',
-    method='update',
-    args=[
-        {'visible': create_visibility(dataset_filter=list(datasets.keys())[0])},
-        {'xaxis.range': time_range, 'yaxis.range': duration_range}
-    ]
-)]
-for title in all_titles:
-    visible = create_visibility(dataset_filter=list(datasets.keys())[0], title_filter=title)
-    button = dict(
-        label=title,
-        method='update',
-        args=[
-            {'visible': visible},
-            {'xaxis.range': time_range, 'yaxis.range': duration_range}
-        ]
-    )
-    title_buttons.append(button)
+            const label = document.createElement('label');
+            label.htmlFor = checkbox.id;
+            label.textContent = value;
 
-# Create location filter buttons
-location_buttons = [dict(
-    label='All Locations',
-    method='update',
-    args=[
-        {'visible': create_visibility(dataset_filter=list(datasets.keys())[0])},
-        {'xaxis.range': time_range, 'yaxis.range': duration_range}
-    ]
-)]
-for location in all_locations:
-    visible = create_visibility(dataset_filter=list(datasets.keys())[0], location_filter=location)
-    button = dict(
-        label=location,
-        method='update',
-        args=[
-            {'visible': visible},
-            {'xaxis.range': time_range, 'yaxis.range': duration_range}
-        ]
-    )
-    location_buttons.append(button)
+            div.appendChild(checkbox);
+            div.appendChild(label);
 
-# Update layout with multiple filter dropdowns
-fig.update_layout(
-    title={
-        'text': f'Workflow Execution Dashboard - {csv_files[0].name}',
-        'x': 0.5,
-        'xanchor': 'center',
-        'font': {'size': 24}
-    },
-    xaxis_title='Execution Time',
-    yaxis_title='Duration (seconds)',
-    xaxis=dict(range=time_range),
-    yaxis=dict(range=duration_range),
-    hovermode='closest',
-    showlegend=True,
-    legend={
-        'title': 'User (click to filter)',
-        'orientation': 'v',
-        'yanchor': 'top',
-        'y': 1,
-        'xanchor': 'left',
-        'x': 1.01
-    },
-    template='plotly_white',
-    height=800,
-    updatemenus=[
-        # Dataset selector
-        dict(
-            buttons=dataset_buttons,
-            direction='down',
-            pad={'r': 10, 't': 10},
-            showactive=True,
-            x=0.01,
-            xanchor='left',
-            y=1.22,
-            yanchor='top',
-            bgcolor='white',
-            bordercolor='#333',
-            borderwidth=1,
-            font=dict(size=10)
-        ),
-        # Team filter
-        dict(
-            buttons=team_buttons,
-            direction='down',
-            pad={'r': 10, 't': 10},
-            showactive=True,
-            x=0.18,
-            xanchor='left',
-            y=1.22,
-            yanchor='top',
-            bgcolor='white',
-            bordercolor='#333',
-            borderwidth=1,
-            font=dict(size=10)
-        ),
-        # Title filter
-        dict(
-            buttons=title_buttons,
-            direction='down',
-            pad={'r': 10, 't': 10},
-            showactive=True,
-            x=0.35,
-            xanchor='left',
-            y=1.22,
-            yanchor='top',
-            bgcolor='white',
-            bordercolor='#333',
-            borderwidth=1,
-            font=dict(size=10)
-        ),
-        # Location filter
-        dict(
-            buttons=location_buttons,
-            direction='down',
-            pad={'r': 10, 't': 10},
-            showactive=True,
-            x=0.52,
-            xanchor='left',
-            y=1.22,
-            yanchor='top',
-            bgcolor='white',
-            bordercolor='#333',
-            borderwidth=1,
-            font=dict(size=10)
-        )
-    ],
-    annotations=[
-        dict(
-            text='<b>Dataset:</b>',
-            x=0.01,
-            xref='paper',
-            y=1.19,
-            yref='paper',
-            align='left',
-            showarrow=False,
-            font=dict(size=11, color='#333')
-        ),
-        dict(
-            text='<b>Team:</b>',
-            x=0.18,
-            xref='paper',
-            y=1.19,
-            yref='paper',
-            align='left',
-            showarrow=False,
-            font=dict(size=11, color='#333')
-        ),
-        dict(
-            text='<b>Title:</b>',
-            x=0.35,
-            xref='paper',
-            y=1.19,
-            yref='paper',
-            align='left',
-            showarrow=False,
-            font=dict(size=11, color='#333')
-        ),
-        dict(
-            text='<b>Location:</b>',
-            x=0.52,
-            xref='paper',
-            y=1.19,
-            yref='paper',
-            align='left',
-            showarrow=False,
-            font=dict(size=11, color='#333')
-        ),
-        dict(
-            text='<i>Use dropdowns to filter data. Legend filters by user. Hover for details. Viewport stays fixed when filtering.</i>',
-            x=0.5,
-            xref='paper',
-            y=-0.12,
-            yref='paper',
-            xanchor='center',
-            showarrow=False,
-            font=dict(size=10, color='#666')
-        )
-    ]
-)
+            // Click on div also toggles checkbox
+            div.onclick = (e) => {{
+                if (e.target !== checkbox) {{
+                    checkbox.checked = !checkbox.checked;
+                }}
+            }};
 
-# Save to HTML with enhanced interactivity
-fig.write_html(
-    'workflow_dashboard.html',
-    config={
-        'displayModeBar': True,
-        'displaylogo': False,
-        'modeBarButtonsToAdd': ['hoverclosest', 'hovercompare'],
-        'toImageButtonOptions': {
-            'format': 'png',
-            'filename': 'workflow_dashboard',
-            'height': 700,
-            'width': 1200,
-            'scale': 2
-        }
-    }
-)
+            return div;
+        }}
+
+        // Filter selection functions
+        function selectAllDatasets() {{
+            document.querySelectorAll('[data-type="dataset"]').forEach(cb => cb.checked = true);
+        }}
+        function clearAllDatasets() {{
+            document.querySelectorAll('[data-type="dataset"]').forEach(cb => cb.checked = false);
+        }}
+        function selectAllTeams() {{
+            document.querySelectorAll('[data-type="team"]').forEach(cb => cb.checked = true);
+        }}
+        function clearAllTeams() {{
+            document.querySelectorAll('[data-type="team"]').forEach(cb => cb.checked = false);
+        }}
+        function selectAllTitles() {{
+            document.querySelectorAll('[data-type="title"]').forEach(cb => cb.checked = true);
+        }}
+        function clearAllTitles() {{
+            document.querySelectorAll('[data-type="title"]').forEach(cb => cb.checked = false);
+        }}
+        function selectAllLocations() {{
+            document.querySelectorAll('[data-type="location"]').forEach(cb => cb.checked = true);
+        }}
+        function clearAllLocations() {{
+            document.querySelectorAll('[data-type="location"]').forEach(cb => cb.checked = false);
+        }}
+
+        // Load CSV files
+        async function loadCSVFiles() {{
+            const promises = CSV_FILES.map(file =>
+                new Promise((resolve, reject) => {{
+                    Papa.parse(file, {{
+                        download: true,
+                        header: true,
+                        dynamicTyping: false,
+                        complete: (results) => {{
+                            results.data.forEach(row => {{
+                                row._dataset = file;
+                            }});
+                            resolve(results.data);
+                        }},
+                        error: reject
+                    }});
+                }})
+            );
+
+            const results = await Promise.all(promises);
+            allData = results.flat().filter(row => row.timestamp); // Filter out empty rows
+
+            // Calculate global axis ranges
+            const timestamps = allData.map(d => new Date(d.timestamp));
+            const durations = allData.map(d => parseFloat(d.duration));
+
+            const minTime = new Date(Math.min(...timestamps));
+            const maxTime = new Date(Math.max(...timestamps));
+            const minDuration = Math.min(...durations);
+            const maxDuration = Math.max(...durations);
+
+            const timePadding = (maxTime - minTime) * 0.05;
+            const durationPadding = (maxDuration - minDuration) * 0.05;
+
+            globalAxisRanges = {{
+                xaxis: [new Date(minTime.getTime() - timePadding), new Date(maxTime.getTime() + timePadding)],
+                yaxis: [minDuration - durationPadding, maxDuration + durationPadding]
+            }};
+
+            return allData;
+        }}
+
+        // Get selected filter values
+        function getSelectedFilters() {{
+            return {{
+                datasets: Array.from(document.querySelectorAll('[data-type="dataset"]:checked'))
+                    .map(cb => cb.dataset.value),
+                teams: Array.from(document.querySelectorAll('[data-type="team"]:checked'))
+                    .map(cb => cb.dataset.value),
+                titles: Array.from(document.querySelectorAll('[data-type="title"]:checked'))
+                    .map(cb => cb.dataset.value),
+                locations: Array.from(document.querySelectorAll('[data-type="location"]:checked'))
+                    .map(cb => cb.dataset.value)
+            }};
+        }}
+
+        // Apply filters and update plot
+        function applyFilters() {{
+            const filters = getSelectedFilters();
+
+            // Filter data
+            const filteredData = allData.filter(row => {{
+                return filters.datasets.includes(row._dataset) &&
+                       filters.teams.includes(row.team) &&
+                       filters.titles.includes(row.title) &&
+                       filters.locations.includes(row.location);
+            }});
+
+            // Group by user
+            const dataByUser = {{}};
+            filteredData.forEach(row => {{
+                if (!dataByUser[row.user_name]) {{
+                    dataByUser[row.user_name] = [];
+                }}
+                dataByUser[row.user_name].push(row);
+            }});
+
+            // Create traces
+            const traces = [];
+            USERS.forEach((user, idx) => {{
+                if (dataByUser[user]) {{
+                    const userData = dataByUser[user];
+                    traces.push({{
+                        x: userData.map(d => d.timestamp),
+                        y: userData.map(d => parseFloat(d.duration)),
+                        mode: 'markers',
+                        type: 'scatter',
+                        name: user,
+                        marker: {{
+                            size: 10,
+                            color: COLOR_PALETTE[idx % COLOR_PALETTE.length],
+                            line: {{ width: 1, color: 'white' }},
+                            opacity: 0.8
+                        }},
+                        customdata: userData.map(d => [
+                            d.user_name, d.workflow_name, d.correlation_id,
+                            d.team, d.title, d.location
+                        ]),
+                        hovertemplate:
+                            '<b>%{{customdata[1]}}</b><br>' +
+                            'User: %{{customdata[0]}}<br>' +
+                            'Team: %{{customdata[3]}}<br>' +
+                            'Title: %{{customdata[4]}}<br>' +
+                            'Location: %{{customdata[5]}}<br>' +
+                            'Time: %{{x}}<br>' +
+                            'Duration: %{{y:.2f}}s<br>' +
+                            'Correlation ID: %{{customdata[2]}}<br>' +
+                            '<extra></extra>'
+                    }});
+                }}
+            }});
+
+            const layout = {{
+                title: 'Workflow Execution Dashboard',
+                xaxis: {{
+                    title: 'Execution Time',
+                    range: globalAxisRanges.xaxis
+                }},
+                yaxis: {{
+                    title: 'Duration (seconds)',
+                    range: globalAxisRanges.yaxis
+                }},
+                hovermode: 'closest',
+                showlegend: true,
+                legend: {{
+                    title: {{ text: 'User (click to toggle)' }}
+                }},
+                template: 'plotly_white',
+                height: 700
+            }};
+
+            const config = {{
+                displayModeBar: true,
+                displaylogo: false,
+                toImageButtonOptions: {{
+                    format: 'png',
+                    filename: 'workflow_dashboard',
+                    height: 700,
+                    width: 1200,
+                    scale: 2
+                }}
+            }};
+
+            Plotly.newPlot('plot', traces, layout, config);
+        }}
+
+        // Initialize on page load
+        initializeFilters();
+        loadCSVFiles().then(() => {{
+            applyFilters();
+            console.log('Dashboard loaded successfully');
+        }}).catch(error => {{
+            console.error('Error loading CSV files:', error);
+            document.getElementById('plot').innerHTML =
+                '<div style="padding: 40px; text-align: center; color: #d32f2f;">' +
+                '<h2>Error Loading Data</h2>' +
+                '<p>Could not load CSV files. Please ensure they are in the same directory as this HTML file.</p>' +
+                '<p style="font-family: monospace; font-size: 12px;">' + error + '</p>' +
+                '</div>';
+        }});
+    </script>
+</body>
+</html>'''
+
+# Write HTML file
+with open('workflow_dashboard.html', 'w', encoding='utf-8') as f:
+    f.write(html_content)
 
 print("\n✓ Interactive dashboard created: workflow_dashboard.html")
-print(f"✓ Datasets included: {len(datasets)}")
-for csv_name, df in datasets.items():
-    teams = df['team'].unique()
-    locations = df['location'].unique()
-    print(f"  • {csv_name}: {len(df)} executions")
-    print(f"    - {len(df['user_name'].unique())} users, {len(teams)} teams, {len(locations)} locations")
+print(f"✓ CSV files to be loaded: {len(csv_file_names)}")
+print(f"  • {', '.join(csv_file_names)}")
 print(f"\n✓ Filter options available:")
 print(f"  • Teams: {len(all_teams)} ({', '.join(all_teams)})")
 print(f"  • Titles: {len(all_titles)} ({', '.join(all_titles[:3])}{'...' if len(all_titles) > 3 else ''})")
 print(f"  • Locations: {len(all_locations)} ({', '.join(all_locations)})")
+print(f"  • Users: {len(all_users)} ({', '.join(all_users)})")
 print("\nFeatures:")
-print("  • Use dropdown menus to filter by dataset, team, title, or location")
-print("  • Click legend items to filter by user")
-print("  • Viewport stays fixed when filtering (only dots disappear)")
-print("  • Hover over points to see all details")
-print("  • Use toolbar to zoom, pan, and export")
+print("  • Multi-select filters on the right side")
+print("  • CSV files loaded dynamically (not embedded)")
+print("  • Select multiple teams, titles, locations, or datasets")
+print("  • Click 'Apply Filters' to update the visualization")
+print("  • Viewport stays fixed when filtering")
+print("  • Click legend to toggle individual users")
+print("\n⚠️  Important: Keep CSV files in the same directory as the HTML file!")
