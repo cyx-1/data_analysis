@@ -5,13 +5,16 @@ A Tableau-like interactive data visualization tool for analyzing workflow execut
 ## Features
 
 - **Interactive Scatter Plot**: Time vs Duration visualization
-- **Multiple Dataset Support**: Switch between different CSV files using a dropdown menu
-- **Advanced Filtering**: Filter data by team, title, location, or user
-  - Team filter: Show only specific teams
-  - Title filter: Show only specific job titles
-  - Location filter: Show only specific locations
+- **Multi-Select Filters (Right Sidebar)**: Filter data by multiple criteria simultaneously
+  - Dataset filter: Select one or more CSV files
+  - Team filter: Select multiple teams
+  - Title filter: Select multiple job titles
+  - Location filter: Select multiple locations
   - User filter: Click legend to show/hide users
+- **Dynamic CSV Loading**: CSV files are loaded on demand, not embedded in HTML
 - **Viewport Preservation**: When filtering, the chart axes stay fixed - only data points disappear
+- **"All" and "None" Buttons**: Quickly select or clear all items in each filter category
+- **Apply Filters Button**: Update visualization after making filter selections
 - **Rich Attribute Tracking**: Each execution includes team, title, and location information
 - **Detailed Tooltips**: Hover over data points to see:
   - User name
@@ -23,7 +26,7 @@ A Tableau-like interactive data visualization tool for analyzing workflow execut
   - Duration
   - Correlation ID
 - **Interactive Tools**: Zoom, pan, reset, and export to PNG
-- **Self-Contained**: Generates a standalone HTML file that works in any browser
+- **Self-Contained**: HTML file works in any modern browser (requires CSV files in same directory)
 
 ## Prerequisites
 
@@ -80,6 +83,8 @@ open workflow_dashboard.html
 start workflow_dashboard.html
 ```
 
+**⚠️ Important**: Keep the CSV files in the same directory as `workflow_dashboard.html`. The dashboard loads CSV data dynamically using JavaScript, so the files must be accessible in the same folder.
+
 ## CSV File Format
 
 The program expects CSV files with the following columns:
@@ -114,31 +119,39 @@ The dashboard will automatically detect and include all matching CSV files.
 
 ## Dashboard Controls
 
-### Filter Dropdowns (Top of Chart)
-Four dropdown menus are available for filtering:
+### Right Sidebar Filters
+The filter panel on the right side contains four sections with multi-select checkboxes:
 
-1. **Dataset Filter** (leftmost)
-   - Switch between different CSV files
-   - Chart title updates to show current dataset
+1. **📁 Datasets**
+   - Select one or more CSV files to visualize
+   - Use "All" button to select all datasets
+   - Use "None" button to clear selection
 
-2. **Team Filter**
-   - Select "All Teams" or a specific team
-   - Shows only data points from the selected team
+2. **👥 Teams**
+   - Select multiple teams to include in the visualization
+   - Checkboxes allow any combination of teams
 
-3. **Title Filter**
-   - Select "All Titles" or a specific job title
-   - Shows only data points for that title
+3. **💼 Titles**
+   - Select multiple job titles
+   - Multi-select enables comparing different roles
 
-4. **Location Filter**
-   - Select "All Locations" or a specific location
-   - Shows only data points from that location
+4. **📍 Locations**
+   - Select multiple locations
+   - View data from specific geographic regions
 
-**Important**: When you apply filters, the chart viewport (axes) stays fixed - only the data points appear/disappear. This makes it easy to compare filtered vs unfiltered data.
+**How to Use:**
+1. Check/uncheck boxes in any filter section (multiple selections allowed)
+2. Click the blue **"Apply Filters"** button to update the visualization
+3. The chart viewport (axes) stays fixed - only data points appear/disappear
+
+**Quick Actions:**
+- **All** button: Select all items in that category
+- **None** button: Deselect all items in that category
 
 ### User Filtering (Legend)
-- **Click once**: Hide/show data for a specific user
+- **Click user name**: Hide/show data for a specific user
 - **Double-click**: Isolate data for just that user
-- **Click legend title**: Reset user filters
+- Works independently of the sidebar filters
 
 ### Navigation
 - **Zoom**: Click and drag to select an area
@@ -256,10 +269,11 @@ Use the camera icon in the toolbar to export the current view as a high-resoluti
 
 1. **Large Datasets**: The visualization handles hundreds of points well. For thousands, consider filtering or aggregating data first.
 2. **Time Ranges**: Use different CSV files for different time periods (daily, weekly, monthly) for better analysis.
-3. **Comparison**: Switch between datasets using the dropdown to compare different time periods or teams.
+3. **Multi-Select Power**: Select multiple teams AND locations simultaneously to analyze specific combinations (e.g., all Data Science team members in Remote locations).
 4. **Filter Analysis**: Use the Team, Title, and Location filters to analyze performance by organizational segments.
 5. **Viewport Stability**: The fixed viewport when filtering makes it easy to see where data points were before/after filtering.
-6. **Sharing**: The HTML file is self-contained and can be shared via email or hosted on any web server.
+6. **Quick Filtering**: Use "All" and "None" buttons to quickly reset filter sections.
+7. **Sharing**: When sharing the HTML file, include all CSV files in the same directory. Consider creating a zip file with everything.
 
 ## License
 
