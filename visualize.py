@@ -72,7 +72,7 @@ html_content = f'''<!DOCTYPE html>
             top: 20px;
         }}
         .filter-section {{
-            margin-bottom: 25px;
+            margin-bottom: 12px;
         }}
         .filter-section h3 {{
             margin: 0 0 12px 0;
@@ -341,11 +341,6 @@ html_content = f'''<!DOCTYPE html>
                 option.textContent = file;
                 datasetSelect.appendChild(option);
             }});
-
-            // Update filters for first dataset
-            if (CSV_FILES.length > 0) {{
-                updateFiltersForDataset(CSV_FILES[0]);
-            }}
         }}
 
         function createCheckbox(value, type, checked = true) {{
@@ -580,6 +575,11 @@ html_content = f'''<!DOCTYPE html>
         // Initialize on page load
         initializeFilters();
         loadCSVFiles().then(() => {{
+            // Update filters for first dataset after data is loaded
+            if (CSV_FILES.length > 0) {{
+                const datasetSelect = document.getElementById('dataset-select');
+                updateFiltersForDataset(datasetSelect.value || CSV_FILES[0]);
+            }}
             applyFilters();
             console.log('Dashboard loaded successfully');
         }}).catch(error => {{
