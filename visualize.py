@@ -215,7 +215,7 @@ html_content = f'''<!DOCTYPE html>
             <div class="filter-section">
                 <h3 onclick="toggleSection(this)">📁 Dataset</h3>
                 <div class="filter-content">
-                    <select id="dataset-select" class="filter-select" onchange="applyFilters()">
+                    <select id="dataset-select" class="filter-select" onchange="updateFiltersForDataset(this.value); applyFilters();">
                     </select>
                 </div>
             </div>
@@ -267,7 +267,7 @@ html_content = f'''<!DOCTYPE html>
             <div class="info-text">
                 💡 <strong>Click section headers</strong> to collapse/expand filters. Filters update dynamically.
                 <br><br>
-                📊 Each dataset has its own viewport that fits its data range.
+                📊 Each dataset has its own viewport and filter options specific to that dataset.
                 <br><br>
                 ℹ️ To add more CSV files: Place them in this folder and run <code>uv run visualize.py</code> to regenerate.
             </div>
@@ -288,6 +288,7 @@ html_content = f'''<!DOCTYPE html>
 
         let allData = [];
         let datasetAxisRanges = {{}};  // Store axis ranges per dataset
+        let datasetMetadata = {{}};  // Store filter values per dataset
 
         // Toggle filter section collapse/expand
         function toggleSection(header) {{
@@ -296,9 +297,43 @@ html_content = f'''<!DOCTYPE html>
             content.classList.toggle('collapsed');
         }}
 
+        // Update filter options based on selected dataset
+        function updateFiltersForDataset(datasetName) {{
+            const metadata = datasetMetadata[datasetName];
+            if (!metadata) return;
+
+            // Update user filters
+            const userContainer = document.getElementById('user-filters');
+            userContainer.innerHTML = '';
+            metadata.users.forEach(user => {{
+                userContainer.appendChild(createCheckbox(user, 'user', true));
+            }});
+
+            // Update team filters
+            const teamContainer = document.getElementById('team-filters');
+            teamContainer.innerHTML = '';
+            metadata.teams.forEach(team => {{
+                teamContainer.appendChild(createCheckbox(team, 'team', true));
+            }});
+
+            // Update title filters
+            const titleContainer = document.getElementById('title-filters');
+            titleContainer.innerHTML = '';
+            metadata.titles.forEach(title => {{
+                titleContainer.appendChild(createCheckbox(title, 'title', true));
+            }});
+
+            // Update location filters
+            const locationContainer = document.getElementById('location-filters');
+            locationContainer.innerHTML = '';
+            metadata.locations.forEach(location => {{
+                locationContainer.appendChild(createCheckbox(location, 'location', true));
+            }});
+        }}
+
         // Initialize filter checkboxes
         function initializeFilters() {{
-            // Dataset dropdown
+            // Dataset dropdown with change handler
             const datasetSelect = document.getElementById('dataset-select');
             CSV_FILES.forEach(file => {{
                 const option = document.createElement('option');
@@ -307,29 +342,10 @@ html_content = f'''<!DOCTYPE html>
                 datasetSelect.appendChild(option);
             }});
 
-            // User filters
-            const userContainer = document.getElementById('user-filters');
-            USERS.forEach(user => {{
-                userContainer.appendChild(createCheckbox(user, 'user', true));
-            }});
-
-            // Team filters
-            const teamContainer = document.getElementById('team-filters');
-            TEAMS.forEach(team => {{
-                teamContainer.appendChild(createCheckbox(team, 'team', true));
-            }});
-
-            // Title filters
-            const titleContainer = document.getElementById('title-filters');
-            TITLES.forEach(title => {{
-                titleContainer.appendChild(createCheckbox(title, 'title', true));
-            }});
-
-            // Location filters
-            const locationContainer = document.getElementById('location-filters');
-            LOCATIONS.forEach(location => {{
-                locationContainer.appendChild(createCheckbox(location, 'location', true));
-            }});
+            // Update filters for first dataset
+            if (CSV_FILES.length > 0) {{
+                updateFiltersForDataset(CSV_FILES[0]);
+            }}
         }}
 
         function createCheckbox(value, type, checked = true) {{
@@ -420,7 +436,7 @@ html_content = f'''<!DOCTYPE html>
             const results = await Promise.all(promises);
             allData = results.flat().filter(row => row.timestamp); // Filter out empty rows
 
-            // Calculate axis ranges per dataset
+            // Calculate axis ranges and metadata per dataset
             CSV_FILES.forEach(csvFile => {{
                 const datasetData = allData.filter(row => row._dataset === csvFile);
 
@@ -439,6 +455,14 @@ html_content = f'''<!DOCTYPE html>
                     datasetAxisRanges[csvFile] = {{
                         xaxis: [new Date(minTime.getTime() - timePadding), new Date(maxTime.getTime() + timePadding)],
                         yaxis: [minDuration - durationPadding, maxDuration + durationPadding]
+                    }};
+
+                    // Build metadata (unique filter values) for this dataset
+                    datasetMetadata[csvFile] = {{
+                        users: [...new Set(datasetData.map(d => d.user_name))].sort(),
+                        teams: [...new Set(datasetData.map(d => d.team))].sort(),
+                        titles: [...new Set(datasetData.map(d => d.title))].sort(),
+                        locations: [...new Set(datasetData.map(d => d.location))].sort()
                     }};
                 }}
             }});
