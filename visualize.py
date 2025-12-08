@@ -81,6 +81,33 @@ html_content = f'''<!DOCTYPE html>
             color: #333;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }}
+        .filter-section h3:hover {{
+            background: #f5f5f5;
+        }}
+        .filter-section h3::after {{
+            content: '▼';
+            font-size: 10px;
+            transition: transform 0.2s;
+        }}
+        .filter-section h3.collapsed::after {{
+            transform: rotate(-90deg);
+        }}
+        .filter-content {{
+            max-height: 300px;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }}
+        .filter-content.collapsed {{
+            max-height: 0;
         }}
         .filter-options {{
             max-height: 200px;
@@ -186,49 +213,61 @@ html_content = f'''<!DOCTYPE html>
         </div>
         <div class="filters-container">
             <div class="filter-section">
-                <h3>📁 Dataset</h3>
-                <select id="dataset-select" class="filter-select" onchange="applyFilters()">
-                </select>
-            </div>
-
-            <div class="filter-section">
-                <h3>👥 Users</h3>
-                <div class="filter-options" id="user-filters"></div>
-                <div class="filter-actions">
-                    <button class="btn" onclick="selectAllUsers()">All</button>
-                    <button class="btn" onclick="clearAllUsers()">None</button>
+                <h3 onclick="toggleSection(this)">📁 Dataset</h3>
+                <div class="filter-content">
+                    <select id="dataset-select" class="filter-select" onchange="applyFilters()">
+                    </select>
                 </div>
             </div>
 
             <div class="filter-section">
-                <h3>🏢 Teams</h3>
-                <div class="filter-options" id="team-filters"></div>
-                <div class="filter-actions">
-                    <button class="btn" onclick="selectAllTeams()">All</button>
-                    <button class="btn" onclick="clearAllTeams()">None</button>
+                <h3 onclick="toggleSection(this)">👥 Users</h3>
+                <div class="filter-content">
+                    <div class="filter-options" id="user-filters"></div>
+                    <div class="filter-actions">
+                        <button class="btn" onclick="selectAllUsers()">All</button>
+                        <button class="btn" onclick="clearAllUsers()">None</button>
+                    </div>
                 </div>
             </div>
 
             <div class="filter-section">
-                <h3>💼 Titles</h3>
-                <div class="filter-options" id="title-filters"></div>
-                <div class="filter-actions">
-                    <button class="btn" onclick="selectAllTitles()">All</button>
-                    <button class="btn" onclick="clearAllTitles()">None</button>
+                <h3 onclick="toggleSection(this)" class="collapsed">🏢 Teams</h3>
+                <div class="filter-content collapsed">
+                    <div class="filter-options" id="team-filters"></div>
+                    <div class="filter-actions">
+                        <button class="btn" onclick="selectAllTeams()">All</button>
+                        <button class="btn" onclick="clearAllTeams()">None</button>
+                    </div>
                 </div>
             </div>
 
             <div class="filter-section">
-                <h3>📍 Locations</h3>
-                <div class="filter-options" id="location-filters"></div>
-                <div class="filter-actions">
-                    <button class="btn" onclick="selectAllLocations()">All</button>
-                    <button class="btn" onclick="clearAllLocations()">None</button>
+                <h3 onclick="toggleSection(this)" class="collapsed">💼 Titles</h3>
+                <div class="filter-content collapsed">
+                    <div class="filter-options" id="title-filters"></div>
+                    <div class="filter-actions">
+                        <button class="btn" onclick="selectAllTitles()">All</button>
+                        <button class="btn" onclick="clearAllTitles()">None</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <h3 onclick="toggleSection(this)" class="collapsed">📍 Locations</h3>
+                <div class="filter-content collapsed">
+                    <div class="filter-options" id="location-filters"></div>
+                    <div class="filter-actions">
+                        <button class="btn" onclick="selectAllLocations()">All</button>
+                        <button class="btn" onclick="clearAllLocations()">None</button>
+                    </div>
                 </div>
             </div>
 
             <div class="info-text">
-                💡 Filters update dynamically. Each dataset has its own viewport that fits its data range.
+                💡 <strong>Click section headers</strong> to collapse/expand filters. Filters update dynamically.
+                <br><br>
+                📊 Each dataset has its own viewport that fits its data range.
                 <br><br>
                 ℹ️ To add more CSV files: Place them in this folder and run <code>uv run visualize.py</code> to regenerate.
             </div>
@@ -249,6 +288,13 @@ html_content = f'''<!DOCTYPE html>
 
         let allData = [];
         let datasetAxisRanges = {{}};  // Store axis ranges per dataset
+
+        // Toggle filter section collapse/expand
+        function toggleSection(header) {{
+            header.classList.toggle('collapsed');
+            const content = header.nextElementSibling;
+            content.classList.toggle('collapsed');
+        }}
 
         // Initialize filter checkboxes
         function initializeFilters() {{
