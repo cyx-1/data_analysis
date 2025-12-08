@@ -70,20 +70,32 @@ This will:
 
 ### 4. View the Dashboard
 
-Open the generated HTML file in your browser:
+**Important**: Due to browser security restrictions, you need to view the dashboard through a local web server (not by opening the HTML file directly).
+
+**Option A: Use the built-in server (Recommended)**
 
 ```bash
-# Linux
-xdg-open workflow_dashboard.html
-
-# macOS
-open workflow_dashboard.html
-
-# Windows
-start workflow_dashboard.html
+uv run start_server.py
 ```
 
-**⚠️ Important**: Keep the CSV files in the same directory as `workflow_dashboard.html`. The dashboard loads CSV data dynamically using JavaScript, so the files must be accessible in the same folder.
+This will:
+- Start a local web server on port 8000
+- Automatically open the dashboard in your browser
+- Keep running until you press Ctrl+C
+
+**Option B: Use Python's built-in HTTP server**
+
+```bash
+# Python 3
+python -m http.server 8000
+
+# Then open in your browser:
+# http://localhost:8000/workflow_dashboard.html
+```
+
+**Why can't I just open the HTML file?**
+
+When you open `workflow_dashboard.html` directly (using `file://` protocol), browsers block JavaScript from loading the CSV files for security reasons (CORS policy). Running a local web server solves this issue.
 
 ## CSV File Format
 
@@ -180,6 +192,7 @@ data_analysis/
 ├── generate_data.py          # Generate sample dataset 1
 ├── generate_data2.py         # Generate sample dataset 2
 ├── visualize.py              # Main visualization script
+├── start_server.py           # Local web server for viewing dashboard
 ├── workflow_data.csv         # Sample data (November)
 ├── workflow_data2.csv        # Sample data (December)
 └── workflow_dashboard.html   # Generated interactive dashboard
