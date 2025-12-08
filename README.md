@@ -6,7 +6,12 @@ A Tableau-like interactive data visualization tool for analyzing workflow execut
 
 - **Interactive Scatter Plot**: Time vs Duration visualization
 - **Multiple Dataset Support**: Switch between different CSV files using a dropdown menu
-- **User Filtering**: Click legend items to show/hide specific users
+- **Advanced Filtering**: Filter data by team, title, location, or user
+  - Team filter: Show only specific teams
+  - Title filter: Show only specific job titles
+  - Location filter: Show only specific locations
+  - User filter: Click legend to show/hide users
+- **Viewport Preservation**: When filtering, the chart axes stay fixed - only data points disappear
 - **Rich Attribute Tracking**: Each execution includes team, title, and location information
 - **Detailed Tooltips**: Hover over data points to see:
   - User name
@@ -109,15 +114,31 @@ The dashboard will automatically detect and include all matching CSV files.
 
 ## Dashboard Controls
 
-### Dataset Selection
-- **Dropdown Menu**: Located at the top-left of the chart
-- Click to switch between different CSV datasets
-- The title updates to show which dataset is currently displayed
+### Filter Dropdowns (Top of Chart)
+Four dropdown menus are available for filtering:
 
-### User Filtering
+1. **Dataset Filter** (leftmost)
+   - Switch between different CSV files
+   - Chart title updates to show current dataset
+
+2. **Team Filter**
+   - Select "All Teams" or a specific team
+   - Shows only data points from the selected team
+
+3. **Title Filter**
+   - Select "All Titles" or a specific job title
+   - Shows only data points for that title
+
+4. **Location Filter**
+   - Select "All Locations" or a specific location
+   - Shows only data points from that location
+
+**Important**: When you apply filters, the chart viewport (axes) stays fixed - only the data points appear/disappear. This makes it easy to compare filtered vs unfiltered data.
+
+### User Filtering (Legend)
 - **Click once**: Hide/show data for a specific user
 - **Double-click**: Isolate data for just that user
-- **Click legend title**: Reset all filters
+- **Click legend title**: Reset user filters
 
 ### Navigation
 - **Zoom**: Click and drag to select an area
@@ -236,7 +257,9 @@ Use the camera icon in the toolbar to export the current view as a high-resoluti
 1. **Large Datasets**: The visualization handles hundreds of points well. For thousands, consider filtering or aggregating data first.
 2. **Time Ranges**: Use different CSV files for different time periods (daily, weekly, monthly) for better analysis.
 3. **Comparison**: Switch between datasets using the dropdown to compare different time periods or teams.
-4. **Sharing**: The HTML file is self-contained and can be shared via email or hosted on any web server.
+4. **Filter Analysis**: Use the Team, Title, and Location filters to analyze performance by organizational segments.
+5. **Viewport Stability**: The fixed viewport when filtering makes it easy to see where data points were before/after filtering.
+6. **Sharing**: The HTML file is self-contained and can be shared via email or hosted on any web server.
 
 ## License
 
