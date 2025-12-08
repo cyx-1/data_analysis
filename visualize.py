@@ -1,43 +1,99 @@
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
+from pathlib import Path
+import plotly.express as px
 
-# Read the CSV data
-df = pd.read_csv('workflow_data.csv')
+# Find all CSV files matching the pattern
+csv_files = sorted(Path('.').glob('workflow_data*.csv'))
 
-# Convert timestamp to datetime
-df['timestamp'] = pd.to_datetime(df['timestamp'])
+if not csv_files:
+    print("Error: No CSV files found matching 'workflow_data*.csv'")
+    exit(1)
 
-# Sort by timestamp for better visualization
-df = df.sort_values('timestamp')
+print(f"Found {len(csv_files)} CSV file(s):")
+for f in csv_files:
+    print(f"  • {f.name}")
 
-# Create interactive scatter plot
-fig = px.scatter(
-    df,
-    x='timestamp',
-    y='duration',
-    color='user_name',
-    title='Workflow Execution Dashboard',
-    labels={
-        'timestamp': 'Execution Time',
-        'duration': 'Duration (seconds)',
-        'user_name': 'User'
-    },
-    hover_data={
-        'user_name': True,
-        'workflow_name': True,
-        'timestamp': '|%Y-%m-%d %H:%M:%S',
-        'duration': ':.2f',
-        'correlation_id': True
-    },
-    template='plotly_white',
-    height=700
-)
+# Read and process all CSV files
+datasets = {}
+color_palettes = [px.colors.qualitative.Set1, px.colors.qualitative.Set2, px.colors.qualitative.Set3]
 
-# Customize the layout
+for csv_file in csv_files:
+    df = pd.read_csv(csv_file)
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df = df.sort_values('timestamp')
+    datasets[csv_file.name] = df
+
+# Create figure with the first dataset
+fig = go.Figure()
+
+# Color mapping for consistent colors across users
+all_users = set()
+for df in datasets.values():
+    all_users.update(df['user_name'].unique())
+all_users = sorted(all_users)
+color_map = {user: px.colors.qualitative.Set1[i % len(px.colors.qualitative.Set1)]
+             for i, user in enumerate(all_users)}
+
+# Create traces for each dataset and user combination
+dropdown_buttons = []
+
+for dataset_idx, (csv_name, df) in enumerate(datasets.items()):
+    users = df['user_name'].unique()
+
+    for user in users:
+        user_df = df[df['user_name'] == user]
+
+        # Create custom data for hover
+        customdata = user_df[['user_name', 'workflow_name', 'correlation_id']].values
+
+        trace = go.Scatter(
+            x=user_df['timestamp'],
+            y=user_df['duration'],
+            mode='markers',
+            name=user,
+            marker=dict(
+                size=10,
+                color=color_map.get(user, '#000000'),
+                line=dict(width=1, color='white'),
+                opacity=0.8
+            ),
+            customdata=customdata,
+            hovertemplate='<b>%{customdata[1]}</b><br>' +
+                         'User: %{customdata[0]}<br>' +
+                         'Time: %{x|%Y-%m-%d %H:%M:%S}<br>' +
+                         'Duration: %{y:.2f}s<br>' +
+                         'Correlation ID: %{customdata[2]}<br>' +
+                         '<extra></extra>',
+            visible=(dataset_idx == 0)  # Only first dataset visible initially
+        )
+        fig.add_trace(trace)
+
+# Create dropdown menu buttons
+current_trace_idx = 0
+for dataset_idx, (csv_name, df) in enumerate(datasets.items()):
+    num_users = len(df['user_name'].unique())
+
+    # Create visibility list for this dataset
+    visible = [False] * len(fig.data)
+    for i in range(current_trace_idx, current_trace_idx + num_users):
+        visible[i] = True
+
+    button = dict(
+        label=csv_name,
+        method='update',
+        args=[
+            {'visible': visible},
+            {'title': f'Workflow Execution Dashboard - {csv_name}'}
+        ]
+    )
+    dropdown_buttons.append(button)
+    current_trace_idx += num_users
+
+# Update layout with dropdown
 fig.update_layout(
     title={
-        'text': 'Workflow Execution Dashboard',
+        'text': f'Workflow Execution Dashboard - {csv_files[0].name}',
         'x': 0.5,
         'xanchor': 'center',
         'font': {'size': 24}
@@ -53,28 +109,37 @@ fig.update_layout(
         'y': 1,
         'xanchor': 'left',
         'x': 1.01
-    }
-)
-
-# Customize markers
-fig.update_traces(
-    marker=dict(
-        size=10,
-        line=dict(width=1, color='white'),
-        opacity=0.8
-    ),
-    selector=dict(mode='markers')
-)
-
-# Customize hover template
-fig.update_traces(
-    hovertemplate='<b>%{customdata[1]}</b><br>' +
-                  'User: %{customdata[0]}<br>' +
-                  'Time: %{x}<br>' +
-                  'Duration: %{y:.2f}s<br>' +
-                  'Correlation ID: %{customdata[4]}<br>' +
-                  '<extra></extra>',
-    customdata=df[['user_name', 'workflow_name', 'timestamp', 'duration', 'correlation_id']].values
+    },
+    template='plotly_white',
+    height=700,
+    updatemenus=[
+        dict(
+            buttons=dropdown_buttons,
+            direction='down',
+            pad={'r': 10, 't': 10},
+            showactive=True,
+            x=0.01,
+            xanchor='left',
+            y=1.15,
+            yanchor='top',
+            bgcolor='white',
+            bordercolor='#333',
+            borderwidth=1,
+            font=dict(size=12)
+        )
+    ],
+    annotations=[
+        dict(
+            text='Select Dataset:',
+            x=0,
+            xref='paper',
+            y=1.12,
+            yref='paper',
+            align='left',
+            showarrow=False,
+            font=dict(size=14, color='#333')
+        )
+    ]
 )
 
 # Save to HTML with enhanced interactivity
@@ -94,10 +159,12 @@ fig.write_html(
     }
 )
 
-print("✓ Interactive dashboard created: workflow_dashboard.html")
-print(f"✓ Visualized {len(df)} workflow executions")
-print(f"✓ Users: {', '.join(df['user_name'].unique())}")
+print("\n✓ Interactive dashboard created: workflow_dashboard.html")
+print(f"✓ Datasets included: {len(datasets)}")
+for csv_name, df in datasets.items():
+    print(f"  • {csv_name}: {len(df)} executions, {len(df['user_name'].unique())} users")
 print("\nFeatures:")
+print("  • Use dropdown menu to switch between datasets")
 print("  • Click legend items to filter by user")
 print("  • Hover over points to see details")
 print("  • Use toolbar to zoom, pan, and export")
