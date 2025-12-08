@@ -127,6 +127,14 @@
             padding-top: 15px;
             border-top: 1px solid #e0e0e0;
         }
+        .info-text code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 11px;
+            font-style: normal;
+        }
         h1 {
             text-align: center;
             color: #333;
@@ -185,8 +193,9 @@
             </div>
 
             <div class="info-text">
-                💡 Filters update dynamically as you select/deselect items.
-                Viewport stays fixed when filtering.
+                💡 Filters update dynamically. Each dataset has its own viewport that fits its data range.
+                <br><br>
+                ℹ️ To add more CSV files: Place them in this folder and run <code>uv run visualize.py</code> to regenerate.
             </div>
         </div>
     </div>
@@ -204,7 +213,7 @@
         ];
 
         let allData = [];
-        let globalAxisRanges = null;
+        let datasetAxisRanges = {};  // Store axis ranges per dataset
 
         // Initialize filter checkboxes
         function initializeFilters() {
@@ -330,22 +339,28 @@
             const results = await Promise.all(promises);
             allData = results.flat().filter(row => row.timestamp); // Filter out empty rows
 
-            // Calculate global axis ranges
-            const timestamps = allData.map(d => new Date(d.timestamp));
-            const durations = allData.map(d => parseFloat(d.duration));
+            // Calculate axis ranges per dataset
+            CSV_FILES.forEach(csvFile => {
+                const datasetData = allData.filter(row => row._dataset === csvFile);
 
-            const minTime = new Date(Math.min(...timestamps));
-            const maxTime = new Date(Math.max(...timestamps));
-            const minDuration = Math.min(...durations);
-            const maxDuration = Math.max(...durations);
+                if (datasetData.length > 0) {
+                    const timestamps = datasetData.map(d => new Date(d.timestamp));
+                    const durations = datasetData.map(d => parseFloat(d.duration));
 
-            const timePadding = (maxTime - minTime) * 0.05;
-            const durationPadding = (maxDuration - minDuration) * 0.05;
+                    const minTime = new Date(Math.min(...timestamps));
+                    const maxTime = new Date(Math.max(...timestamps));
+                    const minDuration = Math.min(...durations);
+                    const maxDuration = Math.max(...durations);
 
-            globalAxisRanges = {
-                xaxis: [new Date(minTime.getTime() - timePadding), new Date(maxTime.getTime() + timePadding)],
-                yaxis: [minDuration - durationPadding, maxDuration + durationPadding]
-            };
+                    const timePadding = (maxTime - minTime) * 0.05;
+                    const durationPadding = (maxDuration - minDuration) * 0.05;
+
+                    datasetAxisRanges[csvFile] = {
+                        xaxis: [new Date(minTime.getTime() - timePadding), new Date(maxTime.getTime() + timePadding)],
+                        yaxis: [minDuration - durationPadding, maxDuration + durationPadding]
+                    };
+                }
+            });
 
             return allData;
         }
@@ -423,14 +438,17 @@
                 }
             });
 
+            // Get axis ranges for the selected dataset
+            const axisRanges = datasetAxisRanges[filters.dataset];
+
             const layout = {
                 xaxis: {
                     title: 'Execution Time',
-                    range: globalAxisRanges.xaxis
+                    range: axisRanges.xaxis
                 },
                 yaxis: {
                     title: 'Duration (seconds)',
-                    range: globalAxisRanges.yaxis
+                    range: axisRanges.yaxis
                 },
                 hovermode: 'closest',
                 showlegend: false,
