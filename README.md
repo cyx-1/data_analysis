@@ -7,8 +7,12 @@ A Tableau-like interactive data visualization tool for analyzing workflow execut
 - **Interactive Scatter Plot**: Time vs Duration visualization
 - **Multiple Dataset Support**: Switch between different CSV files using a dropdown menu
 - **User Filtering**: Click legend items to show/hide specific users
+- **Rich Attribute Tracking**: Each execution includes team, title, and location information
 - **Detailed Tooltips**: Hover over data points to see:
   - User name
+  - Team
+  - Title
+  - Location
   - Workflow name
   - Execution timestamp
   - Duration
@@ -82,14 +86,17 @@ The program expects CSV files with the following columns:
 | `timestamp` | datetime | Execution timestamp (format: `YYYY-MM-DD HH:MM:SS`) |
 | `duration` | float | Duration in seconds |
 | `correlation_id` | string | Unique identifier for the execution |
+| `team` | string | Team the user belongs to |
+| `title` | string | Job title of the user |
+| `location` | string | Location of the user |
 
 ### Example CSV:
 
 ```csv
-user_name,workflow_name,timestamp,duration,correlation_id
-Alice,Data Processing,2025-11-25 23:04:00,280.25,corr-0001-9030
-Bob,Model Training,2025-11-21 11:17:00,262.97,corr-0013-5404
-Charlie,ETL Pipeline,2025-11-30 12:53:00,160.35,corr-0012-9639
+user_name,workflow_name,timestamp,duration,correlation_id,team,title,location
+Alice,Data Processing,2025-11-25 23:04:00,280.25,corr-0001-9030,Engineering,Data Engineer,New York
+Bob,Model Training,2025-11-21 11:17:00,262.97,corr-0013-5404,Data Science,ML Engineer,San Francisco
+Charlie,ETL Pipeline,2025-11-30 12:53:00,160.35,corr-0012-9639,Analytics,Senior Analyst,London
 ```
 
 ## Using Your Own Data
@@ -122,6 +129,9 @@ The dashboard will automatically detect and include all matching CSV files.
 Move your mouse over any data point to see:
 - Workflow name (bold)
 - User name
+- Team
+- Title
+- Location
 - Execution time
 - Duration in seconds
 - Correlation ID
@@ -153,11 +163,12 @@ Managed by `uv` and defined in `pyproject.toml`:
 ### Modify Data Generation
 
 Edit `generate_data.py` or `generate_data2.py` to customize:
-- User names
+- User names and profiles (team, title, location)
 - Workflow names
 - Date ranges
 - Duration ranges
 - Number of data points
+- Teams, titles, and locations available
 
 ### Modify Visualization
 
