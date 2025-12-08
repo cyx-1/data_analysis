@@ -132,38 +132,37 @@ The dashboard will automatically detect and include all matching CSV files.
 ## Dashboard Controls
 
 ### Right Sidebar Filters
-The filter panel on the right side contains four sections with multi-select checkboxes:
+The filter panel on the right side provides dynamic filtering with instant updates:
 
-1. **📁 Datasets**
-   - Select one or more CSV files to visualize
-   - Use "All" button to select all datasets
-   - Use "None" button to clear selection
+1. **📁 Dataset** (Dropdown)
+   - Select which CSV file to visualize
+   - Single selection - only one dataset at a time
 
-2. **👥 Teams**
+2. **👥 Users** (Multi-select checkboxes)
+   - Select multiple users to include in the visualization
+   - Filters update automatically as you check/uncheck
+   - "All" / "None" buttons for quick selection
+
+3. **🏢 Teams** (Multi-select checkboxes)
    - Select multiple teams to include in the visualization
    - Checkboxes allow any combination of teams
+   - "All" / "None" buttons for quick selection
 
-3. **💼 Titles**
+4. **💼 Titles** (Multi-select checkboxes)
    - Select multiple job titles
    - Multi-select enables comparing different roles
+   - "All" / "None" buttons for quick selection
 
-4. **📍 Locations**
+5. **📍 Locations** (Multi-select checkboxes)
    - Select multiple locations
    - View data from specific geographic regions
+   - "All" / "None" buttons for quick selection
 
-**How to Use:**
-1. Check/uncheck boxes in any filter section (multiple selections allowed)
-2. Click the blue **"Apply Filters"** button to update the visualization
-3. The chart viewport (axes) stays fixed - only data points appear/disappear
-
-**Quick Actions:**
-- **All** button: Select all items in that category
-- **None** button: Deselect all items in that category
-
-### User Filtering (Legend)
-- **Click user name**: Hide/show data for a specific user
-- **Double-click**: Isolate data for just that user
-- Works independently of the sidebar filters
+**How It Works:**
+- **Instant Updates**: Filters apply automatically as you check/uncheck boxes
+- **No Apply Button**: The visualization updates immediately
+- **Viewport Fixed**: Chart axes stay fixed - only data points appear/disappear
+- **Combine Filters**: All filters work together (e.g., Engineering team + Remote location)
 
 ### Navigation
 - **Zoom**: Click and drag to select an area
