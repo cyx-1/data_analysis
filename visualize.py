@@ -499,12 +499,8 @@ html_content = f'''<!DOCTYPE html>
             setTimeout(() => {{
                 const plotDiv = document.getElementById('plot');
                 if (plotDiv && plotDiv.data) {{
-                    Plotly.Relayout('plot', {{
-                        autosize: true
-                    }}).then(() => {{
-                        // Force a full redraw
-                        window.dispatchEvent(new Event('resize'));
-                    }});
+                    // Use Plotly.Plots.resize for proper dimension recalculation
+                    Plotly.Plots.resize(plotDiv);
                 }}
             }}, 350); // Wait for CSS transition
         }}
