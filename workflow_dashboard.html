@@ -403,6 +403,11 @@
         function togglePanel(panelId) {
             const panel = document.getElementById(panelId);
             panel.classList.toggle('collapsed');
+
+            // Resize scatter plot after CSS transition completes (300ms + small buffer)
+            setTimeout(() => {
+                Plotly.Plots.resize('plot');
+            }, 320);
         }
 
         // Calculate percentiles from array of durations
