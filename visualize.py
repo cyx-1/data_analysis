@@ -9,7 +9,7 @@ if not config_file.exists():
     print("Error: chart.yaml not found")
     exit(1)
 
-with open(config_file, 'r') as f:
+with open(config_file, 'r', encoding='utf-8') as f:
     config = yaml.safe_load(f)
 
 chart_title = config.get('title', 'Dashboard')
@@ -36,7 +36,7 @@ for dataset_cfg in datasets_config:
 
     print(f"  • {dataset_name} ({csv_file})")
 
-    df = pd.read_csv(csv_file)
+    df = pd.read_csv(csv_file, encoding='utf-8')
 
     # Convert DataFrame to list of dictionaries for embedding
     embedded_data[dataset_name] = df.to_dict('records')
