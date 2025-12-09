@@ -258,6 +258,120 @@ uv run visualize.py
 
 **Code reference**: `generate_data.py:1-70`
 
+### Task 7: Configure Color Grouping
+
+**Purpose**: Change which attribute determines data point colors
+
+**When**: User wants to analyze data from different perspectives (by user, team, SLA status, location, etc.)
+
+**How it works**:
+- Color By dropdown is populated from filter columns in `chart.yaml`
+- User selects attribute → chart recolors dynamically
+- Useful for visual identification of patterns
+
+**Configuration** (already automatic):
+```yaml
+# chart.yaml
+filters:
+  - column: "user_name"
+    label: "Users"
+    icon: "👥"
+  - column: "is_sla_met"
+    label: "SLA Status"
+    icon: "✅"
+  - column: "team"
+    label: "Teams"
+    icon: "🏢"
+# All filter columns become color grouping options!
+```
+
+**Code coordinates**:
+- Color By dropdown UI: `visualize.py:400-406`
+- State variables: `visualize.py:445-446` (colorGroupBy, colorMap)
+- Populate dropdown: `visualize.py:548-559`
+- Change handler: `visualize.py:941-946`
+- Color application: `visualize.py:728-748`
+
+**Use Cases**:
+- Color by SLA Status → Quickly identify failures (red points)
+- Color by User → Compare individual performance
+- Color by Team → Analyze team-level patterns
+- Color by Location → Identify geographic issues
+
+**No code changes needed** - just ensure filters are configured in chart.yaml!
+
+### Task 8: Add SLA Tracking to Data
+
+**Purpose**: Track Service Level Agreement compliance
+
+**When**: Need to monitor and visualize which executions meet performance targets
+
+**Steps**:
+1. Add SLA calculation to data generator
+2. Include columns in CSV
+3. Configure SLA filter in chart.yaml
+4. Use color grouping to visualize
+
+**Example Implementation**:
+```python
+# In generate_data.py or custom generator
+
+# Add SLA calculation (after duration is set)
+expected_duration = round(random.uniform(150, 250), 2)  # Target time
+is_sla_met = 'Yes' if duration <= expected_duration else 'No'
+
+# Add to data dict
+data.append({
+    'user_name': user,
+    'workflow_name': workflow,
+    'timestamp': timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+    'duration': duration,
+    'correlation_id': correlation_id,
+    'team': team,
+    'title': title,
+    'location': location,
+    'expected_duration': expected_duration,  # New column
+    'is_sla_met': is_sla_met  # New column
+})
+
+# Update CSV fieldnames
+fieldnames=['user_name', 'workflow_name', 'timestamp', 'duration',
+            'correlation_id', 'team', 'title', 'location',
+            'expected_duration', 'is_sla_met']
+```
+
+**Configuration**:
+```yaml
+# chart.yaml - Add SLA Status filter (typically as 2nd filter)
+filters:
+  - column: "user_name"
+    label: "Users"
+    icon: "👥"
+  - column: "is_sla_met"
+    label: "SLA Status"
+    icon: "✅"  # This appears expanded by default (2nd filter)
+  # ... other filters
+```
+
+**Usage Workflow**:
+1. User selects "Color By: SLA Status" → Failed runs show in red
+2. User filters "SLA Status: No" → Only see failures
+3. User clicks failed points to select them
+4. User exports to CSV for investigation
+5. User correlates with Team/User filters to find root cause
+
+**Code coordinates**:
+- Data generation: `generate_data.py:35-37`, `generate_data2.py:35-37`
+- CSV writing: `generate_data.py:48-49`, `generate_data2.py:48-49`
+- Configuration: `chart.yaml:17-19`, `chart.yaml:43-45`
+- See `design.md` section 9 for complete data flow
+
+**Common Analysis Patterns**:
+- **Identify violations**: Color by SLA Status
+- **Root cause**: Filter SLA Status=No, then check User/Team distribution
+- **Trend analysis**: Use timestamp to see if violations increase over time
+- **Performance comparison**: Color by User, filter by SLA to see compliance rates
+
 ## Development Workflow
 
 ### Standard Workflow
@@ -330,6 +444,18 @@ open workflow_dashboard.html
 - Metadata: `workflow_dashboard.html:654-660`
 - UI generation: `workflow_dashboard.html:526-569`
 - Application: `workflow_dashboard.html:689-808`
+
+**Color Grouping**:
+- Dropdown UI: `visualize.py:400-406`
+- State variables: `visualize.py:445-446`
+- Population: `visualize.py:548-559`
+- Change handler: `visualize.py:941-946`
+- Application: `visualize.py:728-748`
+
+**SLA Tracking**:
+- Data generation: `generate_data.py:35-37`, `generate_data2.py:35-37`
+- Configuration: `chart.yaml:17-19`, `chart.yaml:43-45`
+- Complete flow: See `design.md` section 9
 
 **Full code coordinates**: See `design.md`
 

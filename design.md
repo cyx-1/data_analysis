@@ -257,7 +257,142 @@ const layout = {
 };
 ```
 
-### 8. Embedded Data System
+### 8. Configurable Color Grouping
+
+**Overview**: Allows users to dynamically choose which attribute determines data point colors, enabling different analytical perspectives (by user, team, SLA status, etc.).
+
+**UI Component**: `visualize.py:400-406`
+```python
+<div class="filter-section">
+    <h3 onclick="toggleSection(this)">🎨 Color By</h3>
+    <div class="filter-content">
+        <select id="color-by-select" class="filter-select" onchange="onColorByChange()">
+        </select>
+    </div>
+</div>
+```
+
+**State Variables**: `visualize.py:445-446`
+```javascript
+let colorGroupBy = null;  // Track which attribute determines color
+let colorMap = {};  // Map attribute values to colors
+```
+
+**Populate Dropdown**: `visualize.py:548-559`
+```javascript
+// Populate Color By dropdown with filter columns
+const colorBySelect = document.getElementById('color-by-select');
+colorBySelect.innerHTML = '';
+datasetCfg.filters.forEach((filterCfg, index) => {
+    const option = document.createElement('option');
+    option.value = filterCfg.column;
+    option.textContent = filterCfg.label;
+    colorBySelect.appendChild(option);
+});
+// Set default to first filter column
+colorGroupBy = datasetCfg.filters[0]?.column;
+colorBySelect.value = colorGroupBy;
+```
+
+**Color Application Logic**: `visualize.py:728-748`
+```javascript
+// Use colorGroupBy for grouping and coloring
+const groupColumn = colorGroupBy || datasetCfg.filters[0]?.column || 'user_name';
+
+// Group by the selected color attribute
+const dataByGroup = {};
+filteredData.forEach(row => {
+    const groupValue = row[groupColumn];
+    if (!dataByGroup[groupValue]) {
+        dataByGroup[groupValue] = [];
+    }
+    dataByGroup[groupValue].push(row);
+});
+
+// Get unique values for coloring
+const uniqueGroups = [...new Set(filteredData.map(r => r[groupColumn]))].sort();
+
+// Build color map for consistent coloring
+colorMap = {};
+uniqueGroups.forEach((value, idx) => {
+    colorMap[value] = COLOR_PALETTE[idx % COLOR_PALETTE.length];
+});
+```
+
+**Change Handler**: `visualize.py:941-946`
+```javascript
+// Handle color by change
+function onColorByChange() {
+    const colorBySelect = document.getElementById('color-by-select');
+    colorGroupBy = colorBySelect.value;
+    applyFilters();  // Rebuild chart with new coloring
+}
+```
+
+**Color Palette**: `visualize.py:427-430`
+```javascript
+const COLOR_PALETTE = [
+    '#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00',
+    '#ffff33', '#a65628', '#f781bf', '#999999', '#66c2a5'
+];
+```
+
+**Use Cases**:
+- Color by SLA Status → Identify SLA violations visually
+- Color by User → Compare individual performance
+- Color by Team → Analyze team-level patterns
+- Color by Location → Identify geographic issues
+
+### 9. SLA Tracking
+
+**Overview**: Built-in support for tracking Service Level Agreement compliance through `expected_duration` and `is_sla_met` columns.
+
+**Data Generation**: `generate_data.py:35-37`, `generate_data2.py:35-37`
+```python
+# SLA attributes
+expected_duration = round(random.uniform(150, 250), 2)  # Expected SLA duration
+is_sla_met = 'Yes' if duration <= expected_duration else 'No'
+```
+
+**CSV Columns**:
+- `expected_duration`: Target completion time (float, in seconds)
+- `is_sla_met`: Compliance indicator (string, "Yes" or "No")
+
+**Configuration**: `chart.yaml:17-19`, `chart.yaml:43-45`
+```yaml
+filters:
+  - column: "user_name"
+    label: "Users"
+    icon: "👥"
+  - column: "is_sla_met"
+    label: "SLA Status"
+    icon: "✅"  # Second filter, expanded by default
+```
+
+**Data Flow**:
+1. Generate data with SLA calculation: `generate_data.py:35-37`
+2. Write to CSV: `generate_data.py:48-49`
+3. Read into pandas: `visualize.py:29-47`
+4. Embed in HTML: `visualize.py:424`
+5. Load in JavaScript: `workflow_dashboard.html:614-665`
+6. Filter by SLA Status: `workflow_dashboard.html:698-703`
+7. Color by SLA Status: `visualize.py:728-748`
+
+**Typical Workflow**:
+1. Select dataset in dropdown
+2. Choose "Color By: SLA Status" → Red points are failures
+3. Filter "SLA Status: No" → Show only failed executions
+4. Click failed points to select them
+5. Export to CSV for investigation
+6. Correlate with User/Team filters to identify patterns
+
+**Analysis Patterns**:
+- **Identify violations**: Color by SLA Status, visually see red points
+- **Root cause analysis**: Filter by "SLA Status: No", then check User/Team distribution
+- **Trend analysis**: Use timestamp (X-axis) to see if violations increase over time
+- **Performance comparison**: Color by User, filter by SLA Status to see who meets SLA
+
+### 10. Embedded Data System
 
 **Why Embedded?**
 - No CORS issues
@@ -362,6 +497,20 @@ const EMBEDDED_DATA = {
 - Selected points storage: `workflow_dashboard.html:435`
 - Table update: `workflow_dashboard.html:822-858`
 - CSV export: `workflow_dashboard.html:861-891`
+
+### Color Grouping
+- Color By dropdown UI: `visualize.py:400-406`
+- State variables: `visualize.py:445-446` (colorGroupBy, colorMap)
+- Populate dropdown: `visualize.py:548-559`
+- Change handler: `visualize.py:941-946` (onColorByChange)
+- Color application logic: `visualize.py:728-748`
+- Color palette: `visualize.py:427-430`
+
+### SLA Tracking
+- Data generation with SLA: `generate_data.py:35-37`, `generate_data2.py:35-37`
+- CSV field inclusion: `generate_data.py:48-49`, `generate_data2.py:48-49`
+- SLA filter config: `chart.yaml:17-19`, `chart.yaml:43-45`
+- Data flow: generate_data.py → CSV → pandas → JSON → embedded HTML
 
 ### UI Components
 - Collapsible panels: `workflow_dashboard.html:446-449`
@@ -645,7 +794,9 @@ console.log('Chart config:', CHART_CONFIG);
 
 ## Version History
 
-### v1.0.0 - Current
+### v1.1.0 - Current
+- Configurable color grouping (choose attribute for data point colors)
+- SLA tracking (expected_duration and is_sla_met columns)
 - YAML-based configuration
 - Multi-select data points with export
 - Dynamic histogram with percentiles

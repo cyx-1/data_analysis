@@ -58,6 +58,8 @@ workflow_dashboard.html  →  Open in browser, share with team
 
 - **YAML-Based Configuration**: Externalize all settings in `chart.yaml`
 - **Interactive Scatter Plot**: Configurable X and Y axes
+- **Configurable Color Grouping**: Choose which attribute determines data point colors (User, Team, SLA Status, etc.)
+- **SLA Tracking**: Built-in expected_duration and is_sla_met columns for compliance analysis
 - **Multi-Select Data Points**: Click points to select, view in table, and export to CSV
 - **Duration Histogram**: Shows distribution with percentile markers (50th, 75th, 95th, 97th)
 - **Multi-Select Filters**: Filter data by multiple criteria simultaneously (configured per dataset)
@@ -232,15 +234,52 @@ The CSV files should contain your data columns. The `chart.yaml` configuration d
 ### Example CSV:
 
 ```csv
-user_name,workflow_name,timestamp,duration,correlation_id,team,title,location
-Alice,Data Processing,2025-11-25 23:04:00,280.25,corr-0001-9030,Engineering,Data Engineer,New York
-Bob,Model Training,2025-11-21 11:17:00,262.97,corr-0013-5404,Data Science,ML Engineer,San Francisco
-Charlie,ETL Pipeline,2025-11-30 12:53:00,160.35,corr-0012-9639,Analytics,Senior Analyst,London
+user_name,workflow_name,timestamp,duration,correlation_id,team,title,location,expected_duration,is_sla_met
+Alice,Data Processing,2025-11-25 23:04:00,280.25,corr-0001-9030,Engineering,Data Engineer,New York,225.50,No
+Bob,Model Training,2025-11-21 11:17:00,150.00,corr-0013-5404,Data Science,ML Engineer,San Francisco,200.00,Yes
+Charlie,ETL Pipeline,2025-11-30 12:53:00,160.35,corr-0012-9639,Analytics,Senior Analyst,London,175.00,Yes
 ```
+
+### Column Descriptions:
+
+| Column | Type | Description | Example |
+|--------|------|-------------|---------|
+| `user_name` | string | User who executed the workflow | Alice |
+| `workflow_name` | string | Name of the workflow | Data Processing |
+| `timestamp` | datetime | Execution time | 2025-11-25 23:04:00 |
+| `duration` | float | Actual duration in seconds | 280.25 |
+| `correlation_id` | string | Unique execution identifier | corr-0001-9030 |
+| `team` | string | Team affiliation | Engineering |
+| `title` | string | Job title | Data Engineer |
+| `location` | string | Geographic location | New York |
+| `expected_duration` | float | SLA target duration in seconds | 225.50 |
+| `is_sla_met` | string | Yes/No SLA compliance | No |
 
 ## Dashboard Features
 
-### 1. Multi-Select Data Points
+### 1. Configurable Color Grouping
+
+- **Color By dropdown** below dataset selector
+- Choose which attribute determines data point colors
+- Options: Users, SLA Status, Teams, Titles, Locations (any configured filter)
+- Colors update dynamically when you change selection
+- **Use Cases**:
+  - Color by SLA Status → Instantly see which runs missed SLA
+  - Color by User → Compare individual performance
+  - Color by Team → Analyze team-level patterns
+  - Color by Location → Identify geographic issues
+
+### 2. SLA Tracking
+
+- **expected_duration** column: Target completion time
+- **is_sla_met** column: Yes/No compliance indicator
+- **Quick Analysis**:
+  - Filter by "SLA Status: No" to see only failures
+  - Color by "SLA Status" for visual identification
+  - Export failed runs for investigation
+  - Correlate with User/Team to identify patterns
+
+### 3. Multi-Select Data Points
 
 - **Click** on any data point to select it
 - Click again to deselect
@@ -248,7 +287,7 @@ Charlie,ETL Pipeline,2025-11-30 12:53:00,160.35,corr-0012-9639,Analytics,Senior 
 - **Export button** downloads selected points as CSV
 - Selection counter shows how many points are selected
 
-### 2. Duration Histogram
+### 4. Duration Histogram
 
 - Shows distribution of Y-axis values (e.g., duration)
 - **Percentile markers**:
@@ -259,23 +298,23 @@ Charlie,ETL Pipeline,2025-11-30 12:53:00,160.35,corr-0012-9639,Analytics,Senior 
 - Updates dynamically with filters
 - Collapsible panel
 
-### 3. Dynamic Filters
+### 5. Dynamic Filters
 
 Configured in `chart.yaml` per dataset:
-- First 2 filters are expanded by default
+- First 2 filters are expanded by default (typically Users and SLA Status)
 - Remaining filters are collapsed
 - Multi-select checkboxes
 - "All" / "None" buttons for quick selection
 - Instant updates (no apply button needed)
 - Dataset-specific filter options
 
-### 4. Collapsible Panels
+### 6. Collapsible Panels
 
 - **Histogram**: Click ◀ to collapse/expand
 - **Filters**: Click ◀ to collapse/expand
 - Both collapsed = full-screen scatter plot view
 
-### 5. Data Table & Export
+### 7. Data Table & Export
 
 - Table shows all attributes of selected points
 - Scrollable with sticky header
