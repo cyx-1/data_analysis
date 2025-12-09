@@ -1,6 +1,58 @@
 # Workflow Execution Dashboard
 
-A Tableau-like interactive data visualization tool for analyzing workflow execution data. Built with Python, Plotly, and uv for fast, modern Python dependency management.
+> **Transform CSV performance metrics into portable HTML dashboards for standardized team reviews**
+
+## What Is This?
+
+**A tool that generates self-contained, interactive HTML dashboards from CSV files** so your team can review system performance metrics in a consistent, shareable format - no server required.
+
+**Key Value**:
+- 📊 **One Command** → Generates a complete HTML dashboard from CSV files
+- 📦 **Portable** → Self-contained HTML file with embedded data (no server needed)
+- 🔄 **Standardized** → YAML configuration ensures consistent visualization across teams
+- 🎯 **Interactive** → Click, filter, select, and export data points for analysis
+- 📤 **Shareable** → Email the HTML file, or drop it in Slack/Teams - opens anywhere
+
+**Perfect For**:
+- Performance review meetings (display metrics on one screen)
+- Incident post-mortems (analyze and export specific data points)
+- Executive summaries (standardized charts across departments)
+- Sharing analysis with remote team members (no infrastructure setup)
+
+## How It Works
+
+```bash
+# 1. Create configuration file (one time)
+chart.yaml  →  Define what to visualize
+
+# 2. Run generator
+uv run visualize.py  →  Reads CSVs, generates HTML
+
+# 3. Share and analyze
+workflow_dashboard.html  →  Open in browser, share with team
+```
+
+**Result**: A single HTML file containing all your data, ready to open in any browser.
+
+## Real-World Example
+
+**Scenario**: Your team runs workflows across multiple environments and needs to review execution performance.
+
+**Before**:
+- CSV files scattered across systems
+- Different people use different tools (Excel, Tableau, custom scripts)
+- Hard to share analysis (screenshots, copying data)
+- No standard format for reviews
+
+**After**:
+1. Configure `chart.yaml` once (defines what X-axis, Y-axis, filters mean)
+2. Drop CSV files in folder
+3. Run `uv run visualize.py`
+4. Share `workflow_dashboard.html` via email/Slack
+5. Everyone sees the same interactive dashboard
+6. Select problematic data points → Export → Investigate
+
+**Result**: Standardized performance reviews across all teams, with portable analysis.
 
 ## Features
 
