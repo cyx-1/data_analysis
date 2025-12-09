@@ -32,6 +32,10 @@ for i in range(100):
     duration = round(random.uniform(10, 450), 2)  # Duration in seconds (10s to 7.5 minutes)
     correlation_id = f"corr-{i+1:04d}-{random.randint(1000, 9999)}"
 
+    # SLA attributes
+    expected_duration = round(random.uniform(200, 300), 2)  # Expected SLA duration
+    is_sla_met = 'Yes' if duration <= expected_duration else 'No'
+
     data.append({
         'user_name': user,
         'workflow_name': workflow,
@@ -40,12 +44,14 @@ for i in range(100):
         'correlation_id': correlation_id,
         'team': user_profiles[user]['team'],
         'title': user_profiles[user]['title'],
-        'location': user_profiles[user]['location']
+        'location': user_profiles[user]['location'],
+        'expected_duration': expected_duration,
+        'is_sla_met': is_sla_met
     })
 
 # Write to CSV
 with open('workflow_data2.csv', 'w', newline='') as f:
-    writer = csv.DictWriter(f, fieldnames=['user_name', 'workflow_name', 'timestamp', 'duration', 'correlation_id', 'team', 'title', 'location'])
+    writer = csv.DictWriter(f, fieldnames=['user_name', 'workflow_name', 'timestamp', 'duration', 'correlation_id', 'team', 'title', 'location', 'expected_duration', 'is_sla_met'])
     writer.writeheader()
     writer.writerows(data)
 

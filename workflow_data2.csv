@@ -1,101 +1,101 @@
-user_name,workflow_name,timestamp,duration,correlation_id,team,title,location
-Jack,Deployment,2025-12-01 18:45:00,394.7,corr-0001-8770,Platform,Software Engineer,Singapore
-Isabel,Code Review,2025-12-01 22:53:00,430.15,corr-0002-3551,QA,QA Lead,Remote
-Isabel,Database Migration,2025-12-07 01:43:00,437.89,corr-0003-6046,QA,QA Lead,Remote
-Jack,API Testing,2025-12-03 22:37:00,286.74,corr-0004-7868,Platform,Software Engineer,Singapore
-Frank,Security Scan,2025-12-02 18:58:00,449.05,corr-0005-2649,Platform,Platform Engineer,Seattle
-Frank,API Testing,2025-12-06 07:24:00,193.33,corr-0006-2042,Platform,Platform Engineer,Seattle
-Isabel,API Testing,2025-12-08 03:36:00,353.41,corr-0007-7001,QA,QA Lead,Remote
-Isabel,Database Migration,2025-12-03 14:48:00,342.38,corr-0008-3963,QA,QA Lead,Remote
-Frank,Database Migration,2025-12-03 15:04:00,310.26,corr-0009-4795,Platform,Platform Engineer,Seattle
-Grace,Database Migration,2025-12-07 08:11:00,244.09,corr-0010-4215,Security,Security Engineer,Berlin
-Grace,Code Review,2025-12-08 12:55:00,219.76,corr-0011-7867,Security,Security Engineer,Berlin
-Jack,API Testing,2025-12-03 12:14:00,213.39,corr-0012-6156,Platform,Software Engineer,Singapore
-Henry,API Testing,2025-12-08 13:10:00,340.99,corr-0013-7647,DevOps,DevOps Specialist,Austin
-Grace,Deployment,2025-12-06 20:35:00,301.89,corr-0014-3605,Security,Security Engineer,Berlin
-Henry,Deployment,2025-12-01 08:38:00,53.35,corr-0015-6392,DevOps,DevOps Specialist,Austin
-Jack,Database Migration,2025-12-03 01:38:00,319.79,corr-0016-2078,Platform,Software Engineer,Singapore
-Grace,Database Migration,2025-12-03 14:21:00,435.54,corr-0017-3546,Security,Security Engineer,Berlin
-Grace,Database Migration,2025-12-05 06:14:00,163.37,corr-0018-1332,Security,Security Engineer,Berlin
-Frank,Security Scan,2025-12-01 01:16:00,267.6,corr-0019-3474,Platform,Platform Engineer,Seattle
-Isabel,Security Scan,2025-12-04 15:52:00,230.72,corr-0020-9295,QA,QA Lead,Remote
-Henry,Security Scan,2025-12-03 07:15:00,424.09,corr-0021-9701,DevOps,DevOps Specialist,Austin
-Jack,Deployment,2025-12-02 23:26:00,347.68,corr-0022-7637,Platform,Software Engineer,Singapore
-Grace,Code Review,2025-12-06 09:58:00,394.04,corr-0023-8709,Security,Security Engineer,Berlin
-Isabel,Security Scan,2025-12-05 03:58:00,97.5,corr-0024-7371,QA,QA Lead,Remote
-Henry,Security Scan,2025-12-01 00:44:00,87.1,corr-0025-7244,DevOps,DevOps Specialist,Austin
-Frank,Code Review,2025-12-08 21:46:00,120.2,corr-0026-2172,Platform,Platform Engineer,Seattle
-Henry,API Testing,2025-12-08 02:39:00,195.49,corr-0027-6616,DevOps,DevOps Specialist,Austin
-Isabel,API Testing,2025-12-06 18:36:00,16.19,corr-0028-4602,QA,QA Lead,Remote
-Frank,API Testing,2025-12-08 01:58:00,234.86,corr-0029-5023,Platform,Platform Engineer,Seattle
-Jack,Deployment,2025-12-08 03:41:00,348.44,corr-0030-9775,Platform,Software Engineer,Singapore
-Isabel,Security Scan,2025-12-03 01:36:00,372.32,corr-0031-7209,QA,QA Lead,Remote
-Jack,Database Migration,2025-12-01 02:20:00,307.88,corr-0032-3861,Platform,Software Engineer,Singapore
-Frank,Code Review,2025-12-06 21:11:00,11.28,corr-0033-5642,Platform,Platform Engineer,Seattle
-Grace,API Testing,2025-12-03 04:16:00,60.37,corr-0034-8616,Security,Security Engineer,Berlin
-Grace,Security Scan,2025-12-06 02:45:00,310.8,corr-0035-8125,Security,Security Engineer,Berlin
-Henry,Database Migration,2025-12-01 16:47:00,379.23,corr-0036-6687,DevOps,DevOps Specialist,Austin
-Grace,Deployment,2025-12-05 05:40:00,156.45,corr-0037-5356,Security,Security Engineer,Berlin
-Henry,API Testing,2025-12-08 17:08:00,412.64,corr-0038-9307,DevOps,DevOps Specialist,Austin
-Jack,API Testing,2025-12-07 01:52:00,147.1,corr-0039-4072,Platform,Software Engineer,Singapore
-Grace,Code Review,2025-12-08 16:15:00,121.97,corr-0040-5253,Security,Security Engineer,Berlin
-Henry,Database Migration,2025-12-03 10:26:00,442.19,corr-0041-5777,DevOps,DevOps Specialist,Austin
-Henry,Code Review,2025-12-02 17:56:00,199.4,corr-0042-8768,DevOps,DevOps Specialist,Austin
-Grace,Security Scan,2025-12-04 11:32:00,220.92,corr-0043-1985,Security,Security Engineer,Berlin
-Jack,Security Scan,2025-12-08 16:04:00,384.68,corr-0044-4066,Platform,Software Engineer,Singapore
-Grace,Code Review,2025-12-04 05:13:00,310.8,corr-0045-4922,Security,Security Engineer,Berlin
-Jack,Database Migration,2025-12-02 08:22:00,444.75,corr-0046-4001,Platform,Software Engineer,Singapore
-Frank,Database Migration,2025-12-06 19:59:00,207.28,corr-0047-5337,Platform,Platform Engineer,Seattle
-Grace,Code Review,2025-12-07 05:34:00,391.06,corr-0048-1449,Security,Security Engineer,Berlin
-Henry,Deployment,2025-12-04 20:38:00,299.42,corr-0049-3726,DevOps,DevOps Specialist,Austin
-Frank,Deployment,2025-12-07 13:59:00,147.61,corr-0050-9506,Platform,Platform Engineer,Seattle
-Grace,Database Migration,2025-12-03 21:16:00,220.58,corr-0051-1389,Security,Security Engineer,Berlin
-Jack,Deployment,2025-12-04 03:52:00,31.0,corr-0052-2418,Platform,Software Engineer,Singapore
-Frank,Deployment,2025-12-08 02:36:00,342.45,corr-0053-7264,Platform,Platform Engineer,Seattle
-Frank,API Testing,2025-12-03 14:50:00,199.83,corr-0054-7617,Platform,Platform Engineer,Seattle
-Grace,Database Migration,2025-12-01 22:58:00,53.44,corr-0055-8824,Security,Security Engineer,Berlin
-Jack,Code Review,2025-12-01 05:12:00,304.39,corr-0056-4325,Platform,Software Engineer,Singapore
-Jack,Security Scan,2025-12-02 07:07:00,369.86,corr-0057-2185,Platform,Software Engineer,Singapore
-Grace,API Testing,2025-12-01 21:09:00,154.64,corr-0058-6770,Security,Security Engineer,Berlin
-Jack,Security Scan,2025-12-06 21:00:00,383.76,corr-0059-7460,Platform,Software Engineer,Singapore
-Isabel,Code Review,2025-12-01 21:31:00,65.74,corr-0060-9503,QA,QA Lead,Remote
-Isabel,Deployment,2025-12-07 05:29:00,107.67,corr-0061-1826,QA,QA Lead,Remote
-Jack,Database Migration,2025-12-07 06:16:00,339.29,corr-0062-6005,Platform,Software Engineer,Singapore
-Isabel,Security Scan,2025-12-06 17:20:00,87.2,corr-0063-8006,QA,QA Lead,Remote
-Isabel,Deployment,2025-12-05 11:30:00,173.54,corr-0064-2190,QA,QA Lead,Remote
-Grace,Code Review,2025-12-07 00:33:00,144.5,corr-0065-8385,Security,Security Engineer,Berlin
-Henry,API Testing,2025-12-08 15:00:00,152.69,corr-0066-2539,DevOps,DevOps Specialist,Austin
-Isabel,Database Migration,2025-12-04 15:01:00,254.66,corr-0067-9578,QA,QA Lead,Remote
-Frank,Security Scan,2025-12-08 13:54:00,149.68,corr-0068-5907,Platform,Platform Engineer,Seattle
-Isabel,API Testing,2025-12-06 15:10:00,55.95,corr-0069-8891,QA,QA Lead,Remote
-Henry,Code Review,2025-12-07 17:06:00,376.53,corr-0070-2485,DevOps,DevOps Specialist,Austin
-Frank,Database Migration,2025-12-03 00:42:00,342.85,corr-0071-8052,Platform,Platform Engineer,Seattle
-Jack,API Testing,2025-12-07 21:35:00,241.46,corr-0072-3191,Platform,Software Engineer,Singapore
-Jack,Deployment,2025-12-02 16:20:00,156.08,corr-0073-5229,Platform,Software Engineer,Singapore
-Grace,Security Scan,2025-12-06 00:26:00,21.03,corr-0074-2348,Security,Security Engineer,Berlin
-Henry,Code Review,2025-12-01 18:56:00,226.53,corr-0075-5104,DevOps,DevOps Specialist,Austin
-Jack,API Testing,2025-12-02 14:54:00,43.32,corr-0076-1937,Platform,Software Engineer,Singapore
-Isabel,Code Review,2025-12-01 04:01:00,159.43,corr-0077-4826,QA,QA Lead,Remote
-Henry,Database Migration,2025-12-01 05:08:00,353.81,corr-0078-7987,DevOps,DevOps Specialist,Austin
-Jack,API Testing,2025-12-01 10:56:00,428.89,corr-0079-8349,Platform,Software Engineer,Singapore
-Henry,Code Review,2025-12-08 23:15:00,132.85,corr-0080-7720,DevOps,DevOps Specialist,Austin
-Isabel,Database Migration,2025-12-02 03:30:00,126.86,corr-0081-7512,QA,QA Lead,Remote
-Jack,Database Migration,2025-12-08 14:18:00,210.56,corr-0082-8642,Platform,Software Engineer,Singapore
-Frank,Security Scan,2025-12-03 20:49:00,257.0,corr-0083-4957,Platform,Platform Engineer,Seattle
-Isabel,Deployment,2025-12-02 23:21:00,448.61,corr-0084-6956,QA,QA Lead,Remote
-Jack,Deployment,2025-12-04 08:17:00,363.2,corr-0085-2632,Platform,Software Engineer,Singapore
-Frank,Code Review,2025-12-06 08:34:00,16.96,corr-0086-5930,Platform,Platform Engineer,Seattle
-Henry,Database Migration,2025-12-01 05:17:00,423.0,corr-0087-3142,DevOps,DevOps Specialist,Austin
-Grace,Database Migration,2025-12-05 09:12:00,183.71,corr-0088-6101,Security,Security Engineer,Berlin
-Jack,Deployment,2025-12-06 10:48:00,131.6,corr-0089-9255,Platform,Software Engineer,Singapore
-Jack,Deployment,2025-12-07 03:33:00,172.92,corr-0090-7968,Platform,Software Engineer,Singapore
-Grace,Security Scan,2025-12-07 16:35:00,34.91,corr-0091-9644,Security,Security Engineer,Berlin
-Henry,Security Scan,2025-12-08 00:09:00,337.4,corr-0092-4864,DevOps,DevOps Specialist,Austin
-Grace,API Testing,2025-12-05 10:18:00,351.31,corr-0093-3250,Security,Security Engineer,Berlin
-Isabel,Deployment,2025-12-08 14:48:00,103.26,corr-0094-7997,QA,QA Lead,Remote
-Frank,Database Migration,2025-12-04 19:51:00,325.19,corr-0095-1681,Platform,Platform Engineer,Seattle
-Isabel,Security Scan,2025-12-04 21:46:00,376.63,corr-0096-2784,QA,QA Lead,Remote
-Henry,API Testing,2025-12-02 01:31:00,371.6,corr-0097-1550,DevOps,DevOps Specialist,Austin
-Frank,Security Scan,2025-12-05 07:12:00,317.99,corr-0098-8101,Platform,Platform Engineer,Seattle
-Grace,Database Migration,2025-12-08 19:01:00,35.73,corr-0099-5844,Security,Security Engineer,Berlin
-Frank,Security Scan,2025-12-04 16:48:00,378.88,corr-0100-2830,Platform,Platform Engineer,Seattle
+user_name,workflow_name,timestamp,duration,correlation_id,team,title,location,expected_duration,is_sla_met
+Frank,Security Scan,2025-12-01 12:36:00,270.68,corr-0001-9487,Platform,Platform Engineer,Seattle,259.76,No
+Frank,API Testing,2025-12-01 06:09:00,312.82,corr-0002-6463,Platform,Platform Engineer,Seattle,277.37,No
+Jack,Database Migration,2025-12-06 17:16:00,275.43,corr-0003-8399,Platform,Software Engineer,Singapore,277.17,Yes
+Jack,Security Scan,2025-12-04 04:42:00,299.24,corr-0004-5745,Platform,Software Engineer,Singapore,299.53,Yes
+Frank,Deployment,2025-12-01 15:08:00,254.74,corr-0005-4884,Platform,Platform Engineer,Seattle,256.25,Yes
+Frank,Security Scan,2025-12-07 13:59:00,348.38,corr-0006-7390,Platform,Platform Engineer,Seattle,226.54,No
+Grace,Code Review,2025-12-01 20:13:00,389.85,corr-0007-5346,Security,Security Engineer,Berlin,208.5,No
+Jack,Deployment,2025-12-02 01:41:00,209.62,corr-0008-6706,Platform,Software Engineer,Singapore,291.92,Yes
+Grace,Deployment,2025-12-08 04:54:00,219.44,corr-0009-3567,Security,Security Engineer,Berlin,270.04,Yes
+Isabel,Deployment,2025-12-07 02:21:00,290.69,corr-0010-9643,QA,QA Lead,Remote,269.58,No
+Grace,Code Review,2025-12-01 18:21:00,322.98,corr-0011-7258,Security,Security Engineer,Berlin,297.2,No
+Jack,Code Review,2025-12-02 16:16:00,318.0,corr-0012-8683,Platform,Software Engineer,Singapore,218.13,No
+Grace,Database Migration,2025-12-03 09:29:00,413.85,corr-0013-4077,Security,Security Engineer,Berlin,237.0,No
+Henry,Security Scan,2025-12-02 15:57:00,281.77,corr-0014-9378,DevOps,DevOps Specialist,Austin,292.49,Yes
+Grace,Security Scan,2025-12-04 06:06:00,211.21,corr-0015-1751,Security,Security Engineer,Berlin,258.92,Yes
+Henry,API Testing,2025-12-01 13:34:00,400.42,corr-0016-7032,DevOps,DevOps Specialist,Austin,288.1,No
+Isabel,Security Scan,2025-12-08 23:23:00,190.92,corr-0017-7006,QA,QA Lead,Remote,212.27,Yes
+Henry,Security Scan,2025-12-03 23:15:00,185.65,corr-0018-8968,DevOps,DevOps Specialist,Austin,287.97,Yes
+Henry,Code Review,2025-12-03 01:46:00,236.57,corr-0019-3673,DevOps,DevOps Specialist,Austin,281.37,Yes
+Isabel,Security Scan,2025-12-04 00:40:00,114.59,corr-0020-3585,QA,QA Lead,Remote,279.18,Yes
+Jack,Code Review,2025-12-08 17:41:00,421.86,corr-0021-6355,Platform,Software Engineer,Singapore,209.52,No
+Henry,API Testing,2025-12-03 14:17:00,433.32,corr-0022-7615,DevOps,DevOps Specialist,Austin,265.18,No
+Isabel,Security Scan,2025-12-03 08:33:00,173.55,corr-0023-9241,QA,QA Lead,Remote,253.76,Yes
+Frank,Code Review,2025-12-02 16:18:00,271.42,corr-0024-9572,Platform,Platform Engineer,Seattle,277.27,Yes
+Isabel,Security Scan,2025-12-04 18:49:00,88.65,corr-0025-7710,QA,QA Lead,Remote,257.18,Yes
+Isabel,Deployment,2025-12-03 12:31:00,318.24,corr-0026-9013,QA,QA Lead,Remote,206.57,No
+Frank,Security Scan,2025-12-05 11:54:00,366.41,corr-0027-1040,Platform,Platform Engineer,Seattle,208.63,No
+Grace,Code Review,2025-12-04 16:12:00,55.18,corr-0028-1032,Security,Security Engineer,Berlin,288.32,Yes
+Henry,API Testing,2025-12-08 23:21:00,307.03,corr-0029-4131,DevOps,DevOps Specialist,Austin,239.77,No
+Henry,Database Migration,2025-12-07 02:40:00,336.53,corr-0030-2791,DevOps,DevOps Specialist,Austin,236.45,No
+Isabel,Security Scan,2025-12-07 11:00:00,303.0,corr-0031-3712,QA,QA Lead,Remote,201.6,No
+Grace,Security Scan,2025-12-06 03:26:00,319.5,corr-0032-6273,Security,Security Engineer,Berlin,239.15,No
+Jack,Database Migration,2025-12-05 03:25:00,396.14,corr-0033-1614,Platform,Software Engineer,Singapore,285.55,No
+Frank,Database Migration,2025-12-08 04:11:00,401.27,corr-0034-4551,Platform,Platform Engineer,Seattle,213.7,No
+Henry,API Testing,2025-12-01 15:35:00,98.38,corr-0035-3304,DevOps,DevOps Specialist,Austin,213.74,Yes
+Grace,API Testing,2025-12-04 04:12:00,388.37,corr-0036-2629,Security,Security Engineer,Berlin,258.7,No
+Isabel,API Testing,2025-12-05 07:34:00,443.07,corr-0037-5614,QA,QA Lead,Remote,283.12,No
+Grace,Database Migration,2025-12-02 10:43:00,214.24,corr-0038-9910,Security,Security Engineer,Berlin,279.77,Yes
+Isabel,Security Scan,2025-12-03 11:19:00,331.8,corr-0039-3226,QA,QA Lead,Remote,209.52,No
+Frank,Code Review,2025-12-01 15:56:00,373.84,corr-0040-7905,Platform,Platform Engineer,Seattle,267.24,No
+Isabel,Deployment,2025-12-04 11:42:00,28.42,corr-0041-7461,QA,QA Lead,Remote,251.65,Yes
+Frank,Security Scan,2025-12-02 11:14:00,76.5,corr-0042-4085,Platform,Platform Engineer,Seattle,287.09,Yes
+Jack,API Testing,2025-12-01 15:30:00,218.93,corr-0043-1449,Platform,Software Engineer,Singapore,274.68,Yes
+Grace,API Testing,2025-12-05 01:27:00,427.9,corr-0044-9280,Security,Security Engineer,Berlin,271.01,No
+Frank,Deployment,2025-12-04 13:41:00,335.76,corr-0045-4862,Platform,Platform Engineer,Seattle,209.88,No
+Isabel,Deployment,2025-12-06 13:41:00,392.68,corr-0046-4286,QA,QA Lead,Remote,275.31,No
+Frank,Security Scan,2025-12-07 07:39:00,304.2,corr-0047-2118,Platform,Platform Engineer,Seattle,226.0,No
+Henry,Security Scan,2025-12-05 22:49:00,295.91,corr-0048-6817,DevOps,DevOps Specialist,Austin,292.32,No
+Henry,Code Review,2025-12-05 10:00:00,430.47,corr-0049-7718,DevOps,DevOps Specialist,Austin,231.28,No
+Isabel,Code Review,2025-12-07 15:04:00,34.36,corr-0050-3055,QA,QA Lead,Remote,274.18,Yes
+Frank,Code Review,2025-12-03 11:53:00,76.17,corr-0051-3467,Platform,Platform Engineer,Seattle,281.94,Yes
+Jack,API Testing,2025-12-08 22:40:00,211.21,corr-0052-3190,Platform,Software Engineer,Singapore,277.06,Yes
+Grace,API Testing,2025-12-07 15:20:00,96.29,corr-0053-9967,Security,Security Engineer,Berlin,248.29,Yes
+Frank,API Testing,2025-12-01 18:13:00,186.6,corr-0054-8674,Platform,Platform Engineer,Seattle,244.74,Yes
+Frank,API Testing,2025-12-08 21:45:00,73.69,corr-0055-5596,Platform,Platform Engineer,Seattle,246.17,Yes
+Henry,API Testing,2025-12-08 01:36:00,44.86,corr-0056-9276,DevOps,DevOps Specialist,Austin,242.52,Yes
+Jack,Deployment,2025-12-04 07:58:00,201.35,corr-0057-3524,Platform,Software Engineer,Singapore,264.33,Yes
+Grace,API Testing,2025-12-04 05:45:00,162.95,corr-0058-5127,Security,Security Engineer,Berlin,299.31,Yes
+Frank,Deployment,2025-12-01 01:24:00,216.93,corr-0059-4431,Platform,Platform Engineer,Seattle,238.0,Yes
+Grace,Database Migration,2025-12-06 05:57:00,319.93,corr-0060-1962,Security,Security Engineer,Berlin,243.37,No
+Grace,Deployment,2025-12-08 12:18:00,19.06,corr-0061-9413,Security,Security Engineer,Berlin,293.91,Yes
+Frank,Database Migration,2025-12-04 18:56:00,294.74,corr-0062-9844,Platform,Platform Engineer,Seattle,256.95,No
+Isabel,Code Review,2025-12-01 03:42:00,111.87,corr-0063-4339,QA,QA Lead,Remote,204.43,Yes
+Isabel,Deployment,2025-12-07 18:04:00,270.12,corr-0064-7695,QA,QA Lead,Remote,211.48,No
+Jack,Database Migration,2025-12-01 20:14:00,52.89,corr-0065-9218,Platform,Software Engineer,Singapore,242.83,Yes
+Isabel,API Testing,2025-12-05 12:22:00,116.62,corr-0066-1640,QA,QA Lead,Remote,284.11,Yes
+Grace,Database Migration,2025-12-03 02:34:00,366.51,corr-0067-8700,Security,Security Engineer,Berlin,251.21,No
+Jack,Database Migration,2025-12-03 18:27:00,418.32,corr-0068-4740,Platform,Software Engineer,Singapore,207.63,No
+Grace,Deployment,2025-12-01 21:53:00,388.03,corr-0069-2221,Security,Security Engineer,Berlin,239.62,No
+Isabel,Database Migration,2025-12-01 16:50:00,176.95,corr-0070-1186,QA,QA Lead,Remote,264.17,Yes
+Jack,API Testing,2025-12-04 07:08:00,152.1,corr-0071-4479,Platform,Software Engineer,Singapore,208.9,Yes
+Grace,API Testing,2025-12-04 11:17:00,229.44,corr-0072-2700,Security,Security Engineer,Berlin,239.26,Yes
+Isabel,API Testing,2025-12-07 15:16:00,48.27,corr-0073-8118,QA,QA Lead,Remote,212.2,Yes
+Grace,Deployment,2025-12-08 11:21:00,176.96,corr-0074-3689,Security,Security Engineer,Berlin,267.0,Yes
+Jack,Code Review,2025-12-04 10:02:00,121.79,corr-0075-6270,Platform,Software Engineer,Singapore,278.49,Yes
+Jack,API Testing,2025-12-08 03:14:00,224.75,corr-0076-4820,Platform,Software Engineer,Singapore,255.25,Yes
+Frank,Security Scan,2025-12-01 00:14:00,108.64,corr-0077-6564,Platform,Platform Engineer,Seattle,204.19,Yes
+Grace,Code Review,2025-12-05 00:07:00,28.21,corr-0078-4604,Security,Security Engineer,Berlin,273.34,Yes
+Henry,API Testing,2025-12-06 04:41:00,64.35,corr-0079-1217,DevOps,DevOps Specialist,Austin,282.94,Yes
+Jack,Security Scan,2025-12-06 06:14:00,59.3,corr-0080-9267,Platform,Software Engineer,Singapore,248.76,Yes
+Grace,Code Review,2025-12-06 23:45:00,285.03,corr-0081-3305,Security,Security Engineer,Berlin,244.1,No
+Henry,Code Review,2025-12-02 14:53:00,178.69,corr-0082-1421,DevOps,DevOps Specialist,Austin,258.58,Yes
+Grace,Database Migration,2025-12-03 00:01:00,313.74,corr-0083-3450,Security,Security Engineer,Berlin,230.94,No
+Henry,Security Scan,2025-12-08 23:49:00,422.41,corr-0084-6327,DevOps,DevOps Specialist,Austin,274.43,No
+Isabel,Code Review,2025-12-03 19:12:00,63.3,corr-0085-8514,QA,QA Lead,Remote,238.78,Yes
+Isabel,Code Review,2025-12-03 23:26:00,188.52,corr-0086-6326,QA,QA Lead,Remote,286.51,Yes
+Isabel,Code Review,2025-12-03 23:36:00,144.54,corr-0087-8219,QA,QA Lead,Remote,243.36,Yes
+Jack,Code Review,2025-12-07 21:10:00,62.66,corr-0088-3028,Platform,Software Engineer,Singapore,228.3,Yes
+Henry,Security Scan,2025-12-06 10:42:00,254.29,corr-0089-2711,DevOps,DevOps Specialist,Austin,237.04,No
+Grace,Deployment,2025-12-01 17:20:00,371.48,corr-0090-8226,Security,Security Engineer,Berlin,251.1,No
+Grace,Code Review,2025-12-08 23:55:00,170.78,corr-0091-5880,Security,Security Engineer,Berlin,256.8,Yes
+Grace,Code Review,2025-12-07 22:11:00,40.78,corr-0092-1391,Security,Security Engineer,Berlin,227.52,Yes
+Grace,API Testing,2025-12-06 00:39:00,362.52,corr-0093-9139,Security,Security Engineer,Berlin,210.64,No
+Jack,Code Review,2025-12-08 17:32:00,346.29,corr-0094-5046,Platform,Software Engineer,Singapore,261.23,No
+Grace,Database Migration,2025-12-06 05:12:00,199.72,corr-0095-5850,Security,Security Engineer,Berlin,291.52,Yes
+Frank,Code Review,2025-12-02 05:30:00,197.76,corr-0096-7351,Platform,Platform Engineer,Seattle,255.49,Yes
+Frank,Security Scan,2025-12-01 08:35:00,445.8,corr-0097-6297,Platform,Platform Engineer,Seattle,241.84,No
+Grace,Database Migration,2025-12-03 09:31:00,28.76,corr-0098-4951,Security,Security Engineer,Berlin,254.95,Yes
+Jack,Security Scan,2025-12-07 15:57:00,181.44,corr-0099-6055,Platform,Software Engineer,Singapore,200.39,Yes
+Frank,Deployment,2025-12-01 10:06:00,357.68,corr-0100-6674,Platform,Platform Engineer,Seattle,213.32,No

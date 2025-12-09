@@ -397,6 +397,14 @@ html_content = f'''<!DOCTYPE html>
                 </div>
             </div>
 
+            <div class="filter-section">
+                <h3 onclick="toggleSection(this)">🎨 Color By</h3>
+                <div class="filter-content">
+                    <select id="color-by-select" class="filter-select" onchange="onColorByChange()">
+                    </select>
+                </div>
+            </div>
+
             <div id="dynamic-filters"></div>
 
             <div class="info-text">
@@ -434,6 +442,8 @@ html_content = f'''<!DOCTYPE html>
         let datasetFilterMetadata = {{}};
         let selectedPoints = new Set();
         let currentDatasetConfig = null;
+        let colorGroupBy = null;  // Track which attribute determines color
+        let colorMap = {{}};  // Map values to colors
 
         // Toggle filter section collapse/expand
         function toggleSection(header) {{
@@ -534,6 +544,19 @@ html_content = f'''<!DOCTYPE html>
             // Clear existing dynamic filters
             const dynamicFiltersContainer = document.getElementById('dynamic-filters');
             dynamicFiltersContainer.innerHTML = '';
+
+            // Populate Color By dropdown
+            const colorBySelect = document.getElementById('color-by-select');
+            colorBySelect.innerHTML = '';
+            datasetCfg.filters.forEach((filterCfg, index) => {{
+                const option = document.createElement('option');
+                option.value = filterCfg.column;
+                option.textContent = filterCfg.label;
+                colorBySelect.appendChild(option);
+            }});
+            // Set default to first filter column
+            colorGroupBy = datasetCfg.filters[0]?.column;
+            colorBySelect.value = colorGroupBy;
 
             // Create filter sections based on configuration
             datasetCfg.filters.forEach((filterCfg, index) => {{
@@ -702,10 +725,10 @@ html_content = f'''<!DOCTYPE html>
                 }}
             }});
 
-            // Determine grouping column (first filter column, typically user_name)
-            const groupColumn = datasetCfg.filters[0]?.column || 'user_name';
+            // Use colorGroupBy for grouping and coloring
+            const groupColumn = colorGroupBy || datasetCfg.filters[0]?.column || 'user_name';
 
-            // Group by the grouping column
+            // Group by the selected color attribute
             const dataByGroup = {{}};
             filteredData.forEach(row => {{
                 const groupValue = row[groupColumn];
@@ -717,6 +740,12 @@ html_content = f'''<!DOCTYPE html>
 
             // Get unique values for coloring
             const uniqueGroups = [...new Set(filteredData.map(r => r[groupColumn]))].sort();
+
+            // Build color map for consistent coloring
+            colorMap = {{}};
+            uniqueGroups.forEach((value, idx) => {{
+                colorMap[value] = COLOR_PALETTE[idx % COLOR_PALETTE.length];
+            }});
 
             // Create traces
             const xColumn = datasetCfg.x_axis.column;
@@ -906,6 +935,13 @@ html_content = f'''<!DOCTYPE html>
             const datasetSelect = document.getElementById('dataset-select');
             selectedPoints.clear(); // Clear selections when changing dataset
             updateFiltersForDataset(datasetSelect.value);
+            applyFilters();
+        }}
+
+        // Handle color by change
+        function onColorByChange() {{
+            const colorBySelect = document.getElementById('color-by-select');
+            colorGroupBy = colorBySelect.value;
             applyFilters();
         }}
 
