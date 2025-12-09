@@ -4,29 +4,18 @@ A Tableau-like interactive data visualization tool for analyzing workflow execut
 
 ## Features
 
-- **Interactive Scatter Plot**: Time vs Duration visualization
-- **Multi-Select Filters (Right Sidebar)**: Filter data by multiple criteria simultaneously
-  - Dataset filter: Select one or more CSV files
-  - Team filter: Select multiple teams
-  - Title filter: Select multiple job titles
-  - Location filter: Select multiple locations
-  - User filter: Click legend to show/hide users
-- **Dynamic CSV Loading**: CSV files are loaded on demand, not embedded in HTML
-- **Viewport Preservation**: When filtering, the chart axes stay fixed - only data points disappear
-- **"All" and "None" Buttons**: Quickly select or clear all items in each filter category
-- **Apply Filters Button**: Update visualization after making filter selections
-- **Rich Attribute Tracking**: Each execution includes team, title, and location information
-- **Detailed Tooltips**: Hover over data points to see:
-  - User name
-  - Team
-  - Title
-  - Location
-  - Workflow name
-  - Execution timestamp
-  - Duration
-  - Correlation ID
+- **YAML-Based Configuration**: Externalize all settings in `chart.yaml`
+- **Interactive Scatter Plot**: Configurable X and Y axes
+- **Multi-Select Data Points**: Click points to select, view in table, and export to CSV
+- **Duration Histogram**: Shows distribution with percentile markers (50th, 75th, 95th, 97th)
+- **Multi-Select Filters**: Filter data by multiple criteria simultaneously (configured per dataset)
+- **Collapsible Panels**: Hide histogram and filters for full-screen chart view
+- **Dataset-Specific Configuration**: Each dataset can have different axes, labels, and filters
+- **Embedded Data**: No web server required - CSV data is embedded in HTML
+- **Dynamic Updates**: Filters, histogram, and table update instantly
+- **Rich Tooltips**: Hover over data points to see all attributes
 - **Interactive Tools**: Zoom, pan, reset, and export to PNG
-- **Self-Contained**: HTML file works in any modern browser (requires CSV files in same directory)
+- **Self-Contained**: HTML file works in any modern browser
 
 ## Prerequisites
 
@@ -55,7 +44,39 @@ uv run generate_data.py
 uv run generate_data2.py
 ```
 
-### 3. Create the Dashboard
+### 3. Configure Your Dashboard
+
+Edit `chart.yaml` to configure your dashboard:
+
+```yaml
+title: "Workflow Execution Dashboard"
+
+datasets:
+  - name: "workflow_data.csv"
+    label: "November 2025 Workflows"
+    csv_file: "workflow_data.csv"
+    x_axis:
+      column: "timestamp"
+      label: "Execution Time"
+    y_axis:
+      column: "duration"
+      label: "Duration (seconds)"
+    filters:
+      - column: "user_name"
+        label: "Users"
+        icon: "👥"
+      - column: "team"
+        label: "Teams"
+        icon: "🏢"
+```
+
+Each dataset can have:
+- Different X/Y axis columns and labels
+- Different filter columns
+- Custom icons and labels
+- Independent configuration
+
+### 4. Create the Dashboard
 
 Generate the interactive HTML dashboard:
 
@@ -64,53 +85,91 @@ uv run visualize.py
 ```
 
 This will:
-- Find all CSV files matching `workflow_data*.csv`
-- Process and visualize all datasets
+- Read configuration from `chart.yaml`
+- Load all configured CSV files
+- Embed data directly in HTML
 - Create `workflow_dashboard.html`
 
-### 4. View the Dashboard
+### 5. View the Dashboard
 
-**Important**: Due to browser security restrictions, you need to view the dashboard through a local web server (not by opening the HTML file directly).
-
-**Option A: Use the built-in server (Recommended)**
+Simply open the HTML file in your browser:
 
 ```bash
-uv run start_server.py
+# Double-click workflow_dashboard.html
+# Or open from your browser's File menu
 ```
 
-This will:
-- Start a local web server on port 8000
-- Automatically open the dashboard in your browser
-- Keep running until you press Ctrl+C
+**No web server required!** Data is embedded directly in the HTML.
 
-**Option B: Use Python's built-in HTTP server**
+## Configuration File (chart.yaml)
 
-```bash
-# Python 3
-python -m http.server 8000
+### Structure
 
-# Then open in your browser:
-# http://localhost:8000/workflow_dashboard.html
+```yaml
+title: "Your Dashboard Title"
+
+datasets:
+  - name: "unique_dataset_id"           # Unique identifier
+    label: "Human-Readable Label"       # Display name in dropdown
+    csv_file: "path/to/file.csv"        # CSV file path
+    x_axis:
+      column: "column_name"             # CSV column for X axis
+      label: "X Axis Label"             # Display label
+    y_axis:
+      column: "column_name"             # CSV column for Y axis
+      label: "Y Axis Label"             # Display label
+    filters:
+      - column: "column_name"           # CSV column to filter by
+        label: "Filter Label"           # Display label
+        icon: "🔹"                      # Optional icon
 ```
 
-**Why can't I just open the HTML file?**
+### Example: Multiple Datasets with Different Configurations
 
-When you open `workflow_dashboard.html` directly (using `file://` protocol), browsers block JavaScript from loading the CSV files for security reasons (CORS policy). Running a local web server solves this issue.
+```yaml
+title: "Multi-Environment Performance Dashboard"
+
+datasets:
+  # Production data - focus on response time
+  - name: "prod"
+    label: "Production"
+    csv_file: "prod_metrics.csv"
+    x_axis:
+      column: "timestamp"
+      label: "Time"
+    y_axis:
+      column: "response_time_ms"
+      label: "Response Time (ms)"
+    filters:
+      - column: "endpoint"
+        label: "API Endpoints"
+        icon: "🔌"
+      - column: "region"
+        label: "Regions"
+        icon: "🌍"
+
+  # Staging data - focus on throughput
+  - name: "staging"
+    label: "Staging Environment"
+    csv_file: "staging_metrics.csv"
+    x_axis:
+      column: "timestamp"
+      label: "Time"
+    y_axis:
+      column: "requests_per_sec"
+      label: "Throughput (req/s)"
+    filters:
+      - column: "service_name"
+        label: "Services"
+        icon: "⚙️"
+      - column: "version"
+        label: "Versions"
+        icon: "📦"
+```
 
 ## CSV File Format
 
-The program expects CSV files with the following columns:
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `user_name` | string | Name of the user who executed the workflow |
-| `workflow_name` | string | Name of the workflow |
-| `timestamp` | datetime | Execution timestamp (format: `YYYY-MM-DD HH:MM:SS`) |
-| `duration` | float | Duration in seconds |
-| `correlation_id` | string | Unique identifier for the execution |
-| `team` | string | Team the user belongs to |
-| `title` | string | Job title of the user |
-| `location` | string | Location of the user |
+The CSV files should contain your data columns. The `chart.yaml` configuration determines which columns are used for axes and filters.
 
 ### Example CSV:
 
@@ -121,77 +180,72 @@ Bob,Model Training,2025-11-21 11:17:00,262.97,corr-0013-5404,Data Science,ML Eng
 Charlie,ETL Pipeline,2025-11-30 12:53:00,160.35,corr-0012-9639,Analytics,Senior Analyst,London
 ```
 
-## Using Your Own Data
+## Dashboard Features
 
-1. Place your CSV files in the project directory
-2. Name them with the pattern `workflow_data*.csv` (e.g., `workflow_data_prod.csv`, `workflow_data_staging.csv`)
-3. Run the visualization script: `uv run visualize.py`
+### 1. Multi-Select Data Points
 
-The dashboard will automatically detect and include all matching CSV files.
+- **Click** on any data point to select it
+- Click again to deselect
+- Selected points appear in the table below the chart
+- **Export button** downloads selected points as CSV
+- Selection counter shows how many points are selected
+
+### 2. Duration Histogram
+
+- Shows distribution of Y-axis values (e.g., duration)
+- **Percentile markers**:
+  - 🟢 50th percentile (solid green line)
+  - 🟠 75th percentile (dashed orange line)
+  - 🔴 95th percentile (dashed red line)
+  - 🟣 97th percentile (dotted purple line)
+- Updates dynamically with filters
+- Collapsible panel
+
+### 3. Dynamic Filters
+
+Configured in `chart.yaml` per dataset:
+- First 2 filters are expanded by default
+- Remaining filters are collapsed
+- Multi-select checkboxes
+- "All" / "None" buttons for quick selection
+- Instant updates (no apply button needed)
+- Dataset-specific filter options
+
+### 4. Collapsible Panels
+
+- **Histogram**: Click ◀ to collapse/expand
+- **Filters**: Click ◀ to collapse/expand
+- Both collapsed = full-screen scatter plot view
+
+### 5. Data Table & Export
+
+- Table shows all attributes of selected points
+- Scrollable with sticky header
+- **Export CSV** button downloads selected data
+- Button disabled when no points selected
 
 ## Dashboard Controls
 
-### Right Sidebar Filters
-The filter panel on the right side provides dynamic filtering with instant updates:
-
-1. **📁 Dataset** (Dropdown)
-   - Select which CSV file to visualize
-   - Single selection - only one dataset at a time
-
-2. **👥 Users** (Multi-select checkboxes)
-   - Select multiple users to include in the visualization
-   - Filters update automatically as you check/uncheck
-   - "All" / "None" buttons for quick selection
-
-3. **🏢 Teams** (Multi-select checkboxes)
-   - Select multiple teams to include in the visualization
-   - Checkboxes allow any combination of teams
-   - "All" / "None" buttons for quick selection
-
-4. **💼 Titles** (Multi-select checkboxes)
-   - Select multiple job titles
-   - Multi-select enables comparing different roles
-   - "All" / "None" buttons for quick selection
-
-5. **📍 Locations** (Multi-select checkboxes)
-   - Select multiple locations
-   - View data from specific geographic regions
-   - "All" / "None" buttons for quick selection
-
-**How It Works:**
-- **Instant Updates**: Filters apply automatically as you check/uncheck boxes
-- **No Apply Button**: The visualization updates immediately
-- **Viewport Fixed**: Chart axes stay fixed - only data points appear/disappear
-- **Combine Filters**: All filters work together (e.g., Engineering team + Remote location)
-
 ### Navigation
 - **Zoom**: Click and drag to select an area
-- **Pan**: Hold Shift and drag, or use the pan tool in the toolbar
+- **Pan**: Hold Shift and drag
 - **Reset**: Double-click anywhere on the chart
-- **Export**: Click the camera icon to save as PNG
+- **Export Chart**: Click camera icon to save as PNG
 
 ### Hover Information
-Move your mouse over any data point to see:
-- Workflow name (bold)
-- User name
-- Team
-- Title
-- Location
-- Execution time
-- Duration in seconds
-- Correlation ID
+Move your mouse over any data point to see all its attributes
 
 ## Project Structure
 
 ```
 data_analysis/
 ├── README.md                  # This file
-├── pyproject.toml            # Project configuration
+├── chart.yaml                 # Dashboard configuration
+├── pyproject.toml            # Project dependencies
 ├── uv.lock                   # Locked dependencies
 ├── generate_data.py          # Generate sample dataset 1
 ├── generate_data2.py         # Generate sample dataset 2
 ├── visualize.py              # Main visualization script
-├── start_server.py           # Local web server for viewing dashboard
 ├── workflow_data.csv         # Sample data (November)
 ├── workflow_data2.csv        # Sample data (December)
 └── workflow_dashboard.html   # Generated interactive dashboard
@@ -202,19 +256,28 @@ data_analysis/
 Managed by `uv` and defined in `pyproject.toml`:
 
 - **pandas**: Data manipulation and CSV processing
+- **pyyaml**: YAML configuration parsing
 - **plotly**: Interactive visualization library
 
 ## Customization
 
+### Modify Configuration
+
+Edit `chart.yaml` to:
+- Change chart title
+- Add/remove datasets
+- Configure X/Y axes per dataset
+- Customize filter columns per dataset
+- Change labels and icons
+
 ### Modify Data Generation
 
 Edit `generate_data.py` or `generate_data2.py` to customize:
-- User names and profiles (team, title, location)
+- User names and profiles
 - Workflow names
 - Date ranges
 - Duration ranges
 - Number of data points
-- Teams, titles, and locations available
 
 ### Modify Visualization
 
@@ -222,70 +285,132 @@ Edit `visualize.py` to customize:
 - Chart colors
 - Marker sizes
 - Layout and styling
-- Hover information format
+- HTML/CSS styling
 
 ## Troubleshooting
 
-### No CSV files found
+### No chart.yaml found
 
-**Error**: `Error: No CSV files found matching 'workflow_data*.csv'`
+**Error**: `Error: chart.yaml not found`
 
-**Solution**: Generate sample data first:
-```bash
-uv run generate_data.py
-```
+**Solution**: Create a `chart.yaml` file following the examples above.
+
+### CSV file not found
+
+**Error**: `Warning: {file} not found, skipping...`
+
+**Solution**: Ensure the CSV file path in `chart.yaml` is correct and the file exists.
+
+### No datasets configured
+
+**Error**: `Error: No datasets configured in chart.yaml`
+
+**Solution**: Add at least one dataset to the `datasets` list in `chart.yaml`.
 
 ### Missing dependencies
 
 **Error**: Module import errors
 
-**Solution**: uv automatically manages dependencies. If issues persist, try:
+**Solution**: Dependencies are automatically managed by uv:
 ```bash
 uv sync
 ```
-
-### Empty or corrupt CSV
-
-**Error**: Pandas parsing errors
-
-**Solution**: Verify your CSV has:
-- A header row with correct column names
-- Properly formatted timestamps
-- No missing required columns
 
 ## Advanced Usage
 
 ### Add More Datasets
 
-Create additional CSV files following the naming pattern:
+1. Create a new CSV file
+2. Add configuration to `chart.yaml`:
 
-```bash
-# Copy and modify the data generation script
-cp generate_data.py generate_data3.py
-
-# Edit the script to change users, workflows, dates
-# Run it to create workflow_data3.csv
-uv run generate_data3.py
-
-# Regenerate the dashboard
-uv run visualize.py
+```yaml
+datasets:
+  - name: "my_new_dataset"
+    label: "My New Dataset"
+    csv_file: "my_data.csv"
+    x_axis:
+      column: "time"
+      label: "Time"
+    y_axis:
+      column: "value"
+      label: "Value"
+    filters:
+      - column: "category"
+        label: "Categories"
+        icon: "📊"
 ```
 
-The dashboard dropdown will automatically include the new dataset.
+3. Regenerate: `uv run visualize.py`
 
-### Export Data
+### Different Axes Per Dataset
 
-Use the camera icon in the toolbar to export the current view as a high-resolution PNG (1200x700px at 2x scale).
+Each dataset can plot different columns:
+
+```yaml
+datasets:
+  # Dataset 1: Time vs Duration
+  - name: "duration_analysis"
+    x_axis:
+      column: "timestamp"
+      label: "Time"
+    y_axis:
+      column: "duration"
+      label: "Duration (s)"
+
+  # Dataset 2: Cost vs Throughput
+  - name: "cost_analysis"
+    x_axis:
+      column: "cost_usd"
+      label: "Cost ($)"
+    y_axis:
+      column: "throughput"
+      label: "Throughput (ops/s)"
+```
+
+### Dataset-Specific Filters
+
+Configure different filters per dataset:
+
+```yaml
+datasets:
+  # Web service dataset
+  - name: "web_metrics"
+    filters:
+      - column: "endpoint"
+        label: "Endpoints"
+      - column: "http_method"
+        label: "HTTP Methods"
+      - column: "status_code"
+        label: "Status Codes"
+
+  # Database dataset
+  - name: "db_metrics"
+    filters:
+      - column: "query_type"
+        label: "Query Types"
+      - column: "table_name"
+        label: "Tables"
+      - column: "index_used"
+        label: "Index Usage"
+```
+
+### Export Selected Data
+
+1. Click data points to select them
+2. Review selected points in the table
+3. Click "📥 Export CSV" button
+4. File downloads as `selected_data.csv`
 
 ## Tips
 
-1. **Large Datasets**: The visualization handles hundreds of points well. For thousands, consider filtering or aggregating data first.
-2. **Time Ranges**: Use different CSV files for different time periods (daily, weekly, monthly) for better analysis.
-3. **Multi-Select Power**: Select multiple teams AND locations simultaneously to analyze specific combinations (e.g., all Data Science team members in Remote locations).
-4. **Filter Analysis**: Use the Team, Title, and Location filters to analyze performance by organizational segments.
-5. **Viewport Stability**: The fixed viewport when filtering makes it easy to see where data points were before/after filtering.
-6. **Quick Filtering**: Use "All" and "None" buttons to quickly reset filter sections.
-7. **Sharing**: When sharing the HTML file, include all CSV files in the same directory. Consider creating a zip file with everything.
+1. **Start Simple**: Begin with a basic configuration and add complexity as needed
+2. **One Config File**: All datasets are configured in one `chart.yaml` file
+3. **Regenerate Anytime**: Edit `chart.yaml` and run `uv run visualize.py` to update
+4. **No Server Needed**: Share the HTML file directly - data is embedded
+5. **Collapsible UI**: Hide panels you don't need for focused analysis
+6. **Multi-Select Power**: Select specific data points for detailed analysis
+7. **Percentiles**: Use histogram percentiles to identify outliers quickly
+8. **Filter Combinations**: Combine multiple filters for targeted analysis
 
 ## License
 
