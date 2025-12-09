@@ -54,7 +54,7 @@ html_content = f'''<!DOCTYPE html>
         .container {{
             display: flex;
             gap: 20px;
-            max-width: 1800px;
+            max-width: 100%;
             margin: 0 auto;
         }}
         .chart-container {{
@@ -63,6 +63,25 @@ html_content = f'''<!DOCTYPE html>
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }}
+        .histogram-container {{
+            width: 280px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+            transition: all 0.3s ease;
+        }}
+        .histogram-container.collapsed {{
+            width: 50px;
+            padding: 10px;
+        }}
+        .histogram-container.collapsed .histogram-content {{
+            display: none;
         }}
         .filters-container {{
             width: 280px;
@@ -73,6 +92,44 @@ html_content = f'''<!DOCTYPE html>
             height: fit-content;
             position: sticky;
             top: 20px;
+            transition: all 0.3s ease;
+        }}
+        .filters-container.collapsed {{
+            width: 50px;
+            padding: 10px;
+        }}
+        .filters-container.collapsed .filters-content {{
+            display: none;
+        }}
+        .panel-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }}
+        .panel-title {{
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }}
+        .collapse-btn {{
+            background: #f5f5f5;
+            border: none;
+            border-radius: 4px;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 16px;
+        }}
+        .collapse-btn:hover {{
+            background: #e0e0e0;
+        }}
+        .collapsed .collapse-btn {{
+            transform: rotate(180deg);
         }}
         .filter-section {{
             margin-bottom: 12px;
@@ -184,6 +241,21 @@ html_content = f'''<!DOCTYPE html>
             width: 100%;
             height: 700px;
         }}
+        #histogram {{
+            width: 100%;
+            height: 700px;
+        }}
+        .percentile-info {{
+            font-size: 11px;
+            color: #666;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }}
+        .percentile-info div {{
+            margin: 4px 0;
+        }}
         .info-text {{
             font-size: 12px;
             color: #666;
@@ -214,7 +286,22 @@ html_content = f'''<!DOCTYPE html>
         <div class="chart-container">
             <div id="plot"></div>
         </div>
-        <div class="filters-container">
+        <div class="histogram-container" id="histogram-panel">
+            <div class="panel-header">
+                <span class="panel-title">📊 Duration Distribution</span>
+                <button class="collapse-btn" onclick="togglePanel('histogram-panel')" title="Collapse">◀</button>
+            </div>
+            <div class="histogram-content">
+                <div id="histogram"></div>
+                <div class="percentile-info" id="percentile-info"></div>
+            </div>
+        </div>
+        <div class="filters-container" id="filters-panel">
+            <div class="panel-header">
+                <span class="panel-title">🔍 Filters</span>
+                <button class="collapse-btn" onclick="togglePanel('filters-panel')" title="Collapse">◀</button>
+            </div>
+            <div class="filters-content">
             <div class="filter-section">
                 <h3 onclick="toggleSection(this)">📁 Dataset</h3>
                 <div class="filter-content">
@@ -272,9 +359,14 @@ html_content = f'''<!DOCTYPE html>
                 <br><br>
                 📊 Each dataset has its own viewport and filter options specific to that dataset.
                 <br><br>
+                📈 Histogram shows duration distribution with percentile markers.
+                <br><br>
+                🔽 Click the collapse buttons to hide histogram or filters for full-screen chart view.
+                <br><br>
                 ℹ️ To add more CSV files: Place them in this folder and run <code>uv run visualize.py</code> to regenerate the HTML.
                 <br><br>
                 ✨ CSV data is embedded - no web server required! Just open this HTML file in your browser.
+            </div>
             </div>
         </div>
     </div>
@@ -303,6 +395,85 @@ html_content = f'''<!DOCTYPE html>
             header.classList.toggle('collapsed');
             const content = header.nextElementSibling;
             content.classList.toggle('collapsed');
+        }}
+
+        // Toggle panel (histogram or filters) collapse/expand
+        function togglePanel(panelId) {{
+            const panel = document.getElementById(panelId);
+            panel.classList.toggle('collapsed');
+        }}
+
+        // Calculate percentiles from array of durations
+        function calculatePercentiles(durations, percentiles) {{
+            const sorted = [...durations].sort((a, b) => a - b);
+            const results = {{}};
+            percentiles.forEach(p => {{
+                const index = Math.ceil((p / 100) * sorted.length) - 1;
+                results[p] = sorted[Math.max(0, index)];
+            }});
+            return results;
+        }}
+
+        // Update histogram with current filtered data
+        function updateHistogram(filteredData) {{
+            if (filteredData.length === 0) {{
+                document.getElementById('histogram').innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">No data to display</p>';
+                document.getElementById('percentile-info').innerHTML = '';
+                return;
+            }}
+
+            const durations = filteredData.map(d => parseFloat(d.duration));
+            const percentiles = calculatePercentiles(durations, [50, 75, 95, 97]);
+
+            // Create histogram trace
+            const trace = {{
+                x: durations,
+                type: 'histogram',
+                marker: {{
+                    color: '#377eb8',
+                    line: {{
+                        color: 'white',
+                        width: 1
+                    }}
+                }},
+                nbinsx: 30
+            }};
+
+            // Create shapes for percentile lines
+            const shapes = [
+                {{ type: 'line', x0: percentiles[50], x1: percentiles[50], y0: 0, y1: 1, yref: 'paper',
+                   line: {{ color: '#4daf4a', width: 2, dash: 'solid' }} }},
+                {{ type: 'line', x0: percentiles[75], x1: percentiles[75], y0: 0, y1: 1, yref: 'paper',
+                   line: {{ color: '#ff7f00', width: 2, dash: 'dash' }} }},
+                {{ type: 'line', x0: percentiles[95], x1: percentiles[95], y0: 0, y1: 1, yref: 'paper',
+                   line: {{ color: '#e41a1c', width: 2, dash: 'dash' }} }},
+                {{ type: 'line', x0: percentiles[97], x1: percentiles[97], y0: 0, y1: 1, yref: 'paper',
+                   line: {{ color: '#984ea3', width: 2, dash: 'dot' }} }}
+            ];
+
+            const layout = {{
+                xaxis: {{ title: 'Duration (seconds)' }},
+                yaxis: {{ title: 'Count' }},
+                margin: {{ t: 20, b: 40, l: 40, r: 20 }},
+                height: 500,
+                showlegend: false,
+                shapes: shapes
+            }};
+
+            const config = {{
+                displayModeBar: false
+            }};
+
+            Plotly.newPlot('histogram', [trace], layout, config);
+
+            // Update percentile info
+            document.getElementById('percentile-info').innerHTML = `
+                <div><strong>Percentiles:</strong></div>
+                <div>🟢 50th: ${{percentiles[50].toFixed(2)}}s</div>
+                <div>🟠 75th: ${{percentiles[75].toFixed(2)}}s</div>
+                <div>🔴 95th: ${{percentiles[95].toFixed(2)}}s</div>
+                <div>🟣 97th: ${{percentiles[97].toFixed(2)}}s</div>
+            `;
         }}
 
         // Update filter options based on selected dataset
@@ -570,6 +741,9 @@ html_content = f'''<!DOCTYPE html>
             }};
 
             Plotly.newPlot('plot', traces, layout, config);
+
+            // Update histogram with filtered data
+            updateHistogram(filteredData);
         }}
 
         // Initialize on page load
@@ -601,9 +775,10 @@ print(f"  • Locations: {len(all_locations)} ({', '.join(all_locations)})")
 print(f"  • Users: {len(all_users)} ({', '.join(all_users)})")
 print("\nFeatures:")
 print("  • Multi-select filters on the right side")
+print("  • Duration histogram with percentile markers (50th, 75th, 95th, 97th)")
+print("  • Collapsible histogram and filter panels for full-screen chart view")
 print("  • CSV data embedded directly in HTML (no external files needed)")
 print("  • Dataset-specific filter options")
-print("  • Collapsible filter sections")
 print("  • Per-dataset viewport optimization")
 print("  • Dynamic filter updates (no apply button needed)")
 print("\n" + "="*60)
