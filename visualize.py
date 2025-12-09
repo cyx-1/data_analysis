@@ -1,36 +1,54 @@
 import pandas as pd
+import yaml
 from pathlib import Path
 import json
 
-# Find all CSV files matching the pattern
-csv_files = sorted(Path('.').glob('workflow_data*.csv'))
-
-if not csv_files:
-    print("Error: No CSV files found matching 'workflow_data*.csv'")
+# Read chart configuration
+config_file = Path('chart.yaml')
+if not config_file.exists():
+    print("Error: chart.yaml not found")
     exit(1)
 
-print(f"Found {len(csv_files)} CSV file(s):")
-for f in csv_files:
-    print(f"  • {f.name}")
+with open(config_file, 'r') as f:
+    config = yaml.safe_load(f)
 
-# Read CSV files to extract metadata for filter options
-all_teams = set()
-all_titles = set()
-all_locations = set()
-all_users = set()
-csv_file_names = [f.name for f in csv_files]
+chart_title = config.get('title', 'Dashboard')
+datasets_config = config.get('datasets', [])
 
-for csv_file in csv_files:
+if not datasets_config:
+    print("Error: No datasets configured in chart.yaml")
+    exit(1)
+
+print(f"Chart Title: {chart_title}")
+print(f"Found {len(datasets_config)} dataset(s) in configuration:")
+
+# Read CSV files and convert to JSON for embedding
+embedded_data = {}
+dataset_metadata = {}
+
+for dataset_cfg in datasets_config:
+    csv_file = Path(dataset_cfg['csv_file'])
+    dataset_name = dataset_cfg['name']
+
+    if not csv_file.exists():
+        print(f"  ⚠️  Warning: {csv_file} not found, skipping...")
+        continue
+
+    print(f"  • {dataset_name} ({csv_file})")
+
     df = pd.read_csv(csv_file)
-    all_teams.update(df['team'].unique())
-    all_titles.update(df['title'].unique())
-    all_locations.update(df['location'].unique())
-    all_users.update(df['user_name'].unique())
 
-all_teams = sorted(all_teams)
-all_titles = sorted(all_titles)
-all_locations = sorted(all_locations)
-all_users = sorted(all_users)
+    # Convert DataFrame to list of dictionaries for embedding
+    embedded_data[dataset_name] = df.to_dict('records')
+
+    # Store all column names for this dataset
+    dataset_metadata[dataset_name] = {
+        'columns': list(df.columns)
+    }
+
+if not embedded_data:
+    print("Error: No valid CSV files found")
+    exit(1)
 
 # Generate HTML with embedded JavaScript
 html_content = f'''<!DOCTYPE html>
@@ -38,9 +56,8 @@ html_content = f'''<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Workflow Execution Dashboard</title>
+    <title>{chart_title}</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -51,15 +68,96 @@ html_content = f'''<!DOCTYPE html>
         .container {{
             display: flex;
             gap: 20px;
-            max-width: 1800px;
+            max-width: 100%;
             margin: 0 auto;
         }}
-        .chart-container {{
+        .main-content {{
             flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }}
+        .chart-container {{
             background: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }}
+        .table-container {{
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-height: 400px;
+            overflow: auto;
+        }}
+        .table-container h3 {{
+            margin: 0 0 15px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }}
+        .export-btn {{
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }}
+        .export-btn:hover {{
+            background: #45a049;
+        }}
+        .export-btn:disabled {{
+            background: #ccc;
+            cursor: not-allowed;
+        }}
+        .data-table {{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }}
+        .data-table th {{
+            background: #f5f5f5;
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #ddd;
+            position: sticky;
+            top: 0;
+        }}
+        .data-table td {{
+            padding: 8px 10px;
+            border-bottom: 1px solid #eee;
+        }}
+        .data-table tr:hover {{
+            background: #f9f9f9;
+        }}
+        .empty-message {{
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }}
+        .histogram-container {{
+            width: 280px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+            transition: all 0.3s ease;
+        }}
+        .histogram-container.collapsed {{
+            width: 50px;
+            padding: 10px;
+        }}
+        .histogram-container.collapsed .histogram-content {{
+            display: none;
         }}
         .filters-container {{
             width: 280px;
@@ -70,6 +168,44 @@ html_content = f'''<!DOCTYPE html>
             height: fit-content;
             position: sticky;
             top: 20px;
+            transition: all 0.3s ease;
+        }}
+        .filters-container.collapsed {{
+            width: 50px;
+            padding: 10px;
+        }}
+        .filters-container.collapsed .filters-content {{
+            display: none;
+        }}
+        .panel-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }}
+        .panel-title {{
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }}
+        .collapse-btn {{
+            background: #f5f5f5;
+            border: none;
+            border-radius: 4px;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 16px;
+        }}
+        .collapse-btn:hover {{
+            background: #e0e0e0;
+        }}
+        .collapsed .collapse-btn {{
+            transform: rotate(180deg);
         }}
         .filter-section {{
             margin-bottom: 12px;
@@ -181,6 +317,21 @@ html_content = f'''<!DOCTYPE html>
             width: 100%;
             height: 700px;
         }}
+        #histogram {{
+            width: 100%;
+            height: 500px;
+        }}
+        .percentile-info {{
+            font-size: 11px;
+            color: #666;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }}
+        .percentile-info div {{
+            margin: 4px 0;
+        }}
         .info-text {{
             font-size: 12px;
             color: #666;
@@ -206,80 +357,80 @@ html_content = f'''<!DOCTYPE html>
     </style>
 </head>
 <body>
-    <h1>Workflow Execution Dashboard</h1>
+    <h1>{chart_title}</h1>
     <div class="container">
-        <div class="chart-container">
-            <div id="plot"></div>
+        <div class="main-content">
+            <div class="chart-container">
+                <div id="plot"></div>
+            </div>
+            <div class="table-container">
+                <h3>
+                    <span>📋 Selected Data Points (<span id="selected-count">0</span>)</span>
+                    <button class="export-btn" id="export-btn" onclick="exportToCSV()" disabled>📥 Export CSV</button>
+                </h3>
+                <div id="data-table-container">
+                    <div class="empty-message">Click on data points in the chart to select them</div>
+                </div>
+            </div>
         </div>
-        <div class="filters-container">
+        <div class="histogram-container" id="histogram-panel">
+            <div class="panel-header">
+                <span class="panel-title">📊 Duration Distribution</span>
+                <button class="collapse-btn" onclick="togglePanel('histogram-panel')" title="Collapse">◀</button>
+            </div>
+            <div class="histogram-content">
+                <div id="histogram"></div>
+                <div class="percentile-info" id="percentile-info"></div>
+            </div>
+        </div>
+        <div class="filters-container" id="filters-panel">
+            <div class="panel-header">
+                <span class="panel-title">🔍 Filters</span>
+                <button class="collapse-btn" onclick="togglePanel('filters-panel')" title="Collapse">◀</button>
+            </div>
+            <div class="filters-content">
             <div class="filter-section">
                 <h3 onclick="toggleSection(this)">📁 Dataset</h3>
                 <div class="filter-content">
-                    <select id="dataset-select" class="filter-select" onchange="updateFiltersForDataset(this.value); applyFilters();">
+                    <select id="dataset-select" class="filter-select" onchange="onDatasetChange()">
                     </select>
                 </div>
             </div>
 
             <div class="filter-section">
-                <h3 onclick="toggleSection(this)">👥 Users</h3>
+                <h3 onclick="toggleSection(this)">🎨 Color By</h3>
                 <div class="filter-content">
-                    <div class="filter-options" id="user-filters"></div>
-                    <div class="filter-actions">
-                        <button class="btn" onclick="selectAllUsers()">All</button>
-                        <button class="btn" onclick="clearAllUsers()">None</button>
-                    </div>
+                    <select id="color-by-select" class="filter-select" onchange="onColorByChange()">
+                    </select>
                 </div>
             </div>
 
-            <div class="filter-section">
-                <h3 onclick="toggleSection(this)" class="collapsed">🏢 Teams</h3>
-                <div class="filter-content collapsed">
-                    <div class="filter-options" id="team-filters"></div>
-                    <div class="filter-actions">
-                        <button class="btn" onclick="selectAllTeams()">All</button>
-                        <button class="btn" onclick="clearAllTeams()">None</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="filter-section">
-                <h3 onclick="toggleSection(this)" class="collapsed">💼 Titles</h3>
-                <div class="filter-content collapsed">
-                    <div class="filter-options" id="title-filters"></div>
-                    <div class="filter-actions">
-                        <button class="btn" onclick="selectAllTitles()">All</button>
-                        <button class="btn" onclick="clearAllTitles()">None</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="filter-section">
-                <h3 onclick="toggleSection(this)" class="collapsed">📍 Locations</h3>
-                <div class="filter-content collapsed">
-                    <div class="filter-options" id="location-filters"></div>
-                    <div class="filter-actions">
-                        <button class="btn" onclick="selectAllLocations()">All</button>
-                        <button class="btn" onclick="clearAllLocations()">None</button>
-                    </div>
-                </div>
-            </div>
+            <div id="dynamic-filters"></div>
 
             <div class="info-text">
                 💡 <strong>Click section headers</strong> to collapse/expand filters. Filters update dynamically.
                 <br><br>
                 📊 Each dataset has its own viewport and filter options specific to that dataset.
                 <br><br>
-                ℹ️ To add more CSV files: Place them in this folder and run <code>uv run visualize.py</code> to regenerate.
+                📈 Histogram shows duration distribution with percentile markers.
+                <br><br>
+                🔽 Click the collapse buttons to hide histogram or filters for full-screen chart view.
+                <br><br>
+                🖱️ Click data points to select them. Selected points appear in the table below the chart.
+                <br><br>
+                ℹ️ To reconfigure: Edit <code>chart.yaml</code> and run <code>uv run visualize.py</code> to regenerate.
+                <br><br>
+                ✨ CSV data is embedded - no web server required! Just open this HTML file in your browser.
+            </div>
             </div>
         </div>
     </div>
 
     <script>
-        const CSV_FILES = {json.dumps(csv_file_names)};
-        const TEAMS = {json.dumps(all_teams)};
-        const TITLES = {json.dumps(all_titles)};
-        const LOCATIONS = {json.dumps(all_locations)};
-        const USERS = {json.dumps(all_users)};
+        // Configuration from YAML
+        const CHART_CONFIG = {json.dumps(config)};
+        const EMBEDDED_DATA = {json.dumps(embedded_data)};
+        const DATASET_METADATA = {json.dumps(dataset_metadata)};
 
         const COLOR_PALETTE = [
             '#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00',
@@ -287,8 +438,12 @@ html_content = f'''<!DOCTYPE html>
         ];
 
         let allData = [];
-        let datasetAxisRanges = {{}};  // Store axis ranges per dataset
-        let datasetMetadata = {{}};  // Store filter values per dataset
+        let datasetAxisRanges = {{}};
+        let datasetFilterMetadata = {{}};
+        let selectedPoints = new Set();
+        let currentDatasetConfig = null;
+        let colorGroupBy = null;  // Track which attribute determines color
+        let colorMap = {{}};  // Map values to colors
 
         // Toggle filter section collapse/expand
         function toggleSection(header) {{
@@ -297,49 +452,142 @@ html_content = f'''<!DOCTYPE html>
             content.classList.toggle('collapsed');
         }}
 
-        // Update filter options based on selected dataset
-        function updateFiltersForDataset(datasetName) {{
-            const metadata = datasetMetadata[datasetName];
-            if (!metadata) return;
-
-            // Update user filters
-            const userContainer = document.getElementById('user-filters');
-            userContainer.innerHTML = '';
-            metadata.users.forEach(user => {{
-                userContainer.appendChild(createCheckbox(user, 'user', true));
-            }});
-
-            // Update team filters
-            const teamContainer = document.getElementById('team-filters');
-            teamContainer.innerHTML = '';
-            metadata.teams.forEach(team => {{
-                teamContainer.appendChild(createCheckbox(team, 'team', true));
-            }});
-
-            // Update title filters
-            const titleContainer = document.getElementById('title-filters');
-            titleContainer.innerHTML = '';
-            metadata.titles.forEach(title => {{
-                titleContainer.appendChild(createCheckbox(title, 'title', true));
-            }});
-
-            // Update location filters
-            const locationContainer = document.getElementById('location-filters');
-            locationContainer.innerHTML = '';
-            metadata.locations.forEach(location => {{
-                locationContainer.appendChild(createCheckbox(location, 'location', true));
-            }});
+        // Toggle panel (histogram or filters) collapse/expand
+        function togglePanel(panelId) {{
+            const panel = document.getElementById(panelId);
+            panel.classList.toggle('collapsed');
         }}
 
-        // Initialize filter checkboxes
-        function initializeFilters() {{
-            // Dataset dropdown with change handler
-            const datasetSelect = document.getElementById('dataset-select');
-            CSV_FILES.forEach(file => {{
+        // Calculate percentiles from array of durations
+        function calculatePercentiles(durations, percentiles) {{
+            const sorted = [...durations].sort((a, b) => a - b);
+            const results = {{}};
+            percentiles.forEach(p => {{
+                const index = Math.ceil((p / 100) * sorted.length) - 1;
+                results[p] = sorted[Math.max(0, index)];
+            }});
+            return results;
+        }}
+
+        // Update histogram with current filtered data
+        function updateHistogram(filteredData) {{
+            if (!currentDatasetConfig || filteredData.length === 0) {{
+                document.getElementById('histogram').innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">No data to display</p>';
+                document.getElementById('percentile-info').innerHTML = '';
+                return;
+            }}
+
+            const yColumn = currentDatasetConfig.y_axis.column;
+            const durations = filteredData.map(d => parseFloat(d[yColumn]));
+            const percentiles = calculatePercentiles(durations, [50, 75, 95, 97]);
+
+            // Create histogram trace
+            const trace = {{
+                x: durations,
+                type: 'histogram',
+                marker: {{
+                    color: '#377eb8',
+                    line: {{
+                        color: 'white',
+                        width: 1
+                    }}
+                }},
+                nbinsx: 30
+            }};
+
+            // Create shapes for percentile lines
+            const shapes = [
+                {{ type: 'line', x0: percentiles[50], x1: percentiles[50], y0: 0, y1: 1, yref: 'paper',
+                   line: {{ color: '#4daf4a', width: 2, dash: 'solid' }} }},
+                {{ type: 'line', x0: percentiles[75], x1: percentiles[75], y0: 0, y1: 1, yref: 'paper',
+                   line: {{ color: '#ff7f00', width: 2, dash: 'dash' }} }},
+                {{ type: 'line', x0: percentiles[95], x1: percentiles[95], y0: 0, y1: 1, yref: 'paper',
+                   line: {{ color: '#e41a1c', width: 2, dash: 'dash' }} }},
+                {{ type: 'line', x0: percentiles[97], x1: percentiles[97], y0: 0, y1: 1, yref: 'paper',
+                   line: {{ color: '#984ea3', width: 2, dash: 'dot' }} }}
+            ];
+
+            const layout = {{
+                xaxis: {{ title: currentDatasetConfig.y_axis.label }},
+                yaxis: {{ title: 'Count' }},
+                margin: {{ t: 20, b: 40, l: 40, r: 20 }},
+                height: 500,
+                showlegend: false,
+                shapes: shapes
+            }};
+
+            const config = {{
+                displayModeBar: false
+            }};
+
+            Plotly.newPlot('histogram', [trace], layout, config);
+
+            // Update percentile info
+            document.getElementById('percentile-info').innerHTML = `
+                <div><strong>Percentiles:</strong></div>
+                <div>🟢 50th: ${{percentiles[50].toFixed(2)}}</div>
+                <div>🟠 75th: ${{percentiles[75].toFixed(2)}}</div>
+                <div>🔴 95th: ${{percentiles[95].toFixed(2)}}</div>
+                <div>🟣 97th: ${{percentiles[97].toFixed(2)}}</div>
+            `;
+        }}
+
+        // Update filter options based on selected dataset
+        function updateFiltersForDataset(datasetName) {{
+            const datasetCfg = CHART_CONFIG.datasets.find(d => d.name === datasetName);
+            if (!datasetCfg) return;
+
+            currentDatasetConfig = datasetCfg;
+            const metadata = datasetFilterMetadata[datasetName];
+            if (!metadata) return;
+
+            // Clear existing dynamic filters
+            const dynamicFiltersContainer = document.getElementById('dynamic-filters');
+            dynamicFiltersContainer.innerHTML = '';
+
+            // Populate Color By dropdown
+            const colorBySelect = document.getElementById('color-by-select');
+            colorBySelect.innerHTML = '';
+            datasetCfg.filters.forEach((filterCfg, index) => {{
                 const option = document.createElement('option');
-                option.value = file;
-                option.textContent = file;
-                datasetSelect.appendChild(option);
+                option.value = filterCfg.column;
+                option.textContent = filterCfg.label;
+                colorBySelect.appendChild(option);
+            }});
+            // Set default to first filter column
+            colorGroupBy = datasetCfg.filters[0]?.column;
+            colorBySelect.value = colorGroupBy;
+
+            // Create filter sections based on configuration
+            datasetCfg.filters.forEach((filterCfg, index) => {{
+                const column = filterCfg.column;
+                const label = filterCfg.label;
+                const icon = filterCfg.icon || '🔹';
+                const values = metadata[column] || [];
+
+                // Determine if this section should be expanded (first two) or collapsed
+                const isCollapsed = index >= 2;
+                const collapsedClass = isCollapsed ? 'collapsed' : '';
+
+                const filterSection = `
+                    <div class="filter-section">
+                        <h3 onclick="toggleSection(this)" class="${{collapsedClass}}">${{icon}} ${{label}}</h3>
+                        <div class="filter-content ${{collapsedClass}}">
+                            <div class="filter-options" id="filter-${{column}}"></div>
+                            <div class="filter-actions">
+                                <button class="btn" onclick="selectAll('${{column}}')">All</button>
+                                <button class="btn" onclick="clearAll('${{column}}')">None</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                dynamicFiltersContainer.innerHTML += filterSection;
+
+                // Populate filter options
+                const container = document.getElementById(`filter-${{column}}`);
+                values.forEach(value => {{
+                    container.appendChild(createCheckbox(value, column, true));
+                }});
             }});
         }}
 
@@ -376,89 +624,63 @@ html_content = f'''<!DOCTYPE html>
         }}
 
         // Filter selection functions
-        function selectAllUsers() {{
-            document.querySelectorAll('[data-type="user"]').forEach(cb => cb.checked = true);
+        function selectAll(column) {{
+            document.querySelectorAll(`[data-type="${{column}}"]:not(:checked)`).forEach(cb => cb.checked = true);
             applyFilters();
         }}
-        function clearAllUsers() {{
-            document.querySelectorAll('[data-type="user"]').forEach(cb => cb.checked = false);
-            applyFilters();
-        }}
-        function selectAllTeams() {{
-            document.querySelectorAll('[data-type="team"]').forEach(cb => cb.checked = true);
-            applyFilters();
-        }}
-        function clearAllTeams() {{
-            document.querySelectorAll('[data-type="team"]').forEach(cb => cb.checked = false);
-            applyFilters();
-        }}
-        function selectAllTitles() {{
-            document.querySelectorAll('[data-type="title"]').forEach(cb => cb.checked = true);
-            applyFilters();
-        }}
-        function clearAllTitles() {{
-            document.querySelectorAll('[data-type="title"]').forEach(cb => cb.checked = false);
-            applyFilters();
-        }}
-        function selectAllLocations() {{
-            document.querySelectorAll('[data-type="location"]').forEach(cb => cb.checked = true);
-            applyFilters();
-        }}
-        function clearAllLocations() {{
-            document.querySelectorAll('[data-type="location"]').forEach(cb => cb.checked = false);
+        function clearAll(column) {{
+            document.querySelectorAll(`[data-type="${{column}}"]:checked`).forEach(cb => cb.checked = false);
             applyFilters();
         }}
 
-        // Load CSV files
-        async function loadCSVFiles() {{
-            const promises = CSV_FILES.map(file =>
-                new Promise((resolve, reject) => {{
-                    Papa.parse(file, {{
-                        download: true,
-                        header: true,
-                        dynamicTyping: false,
-                        complete: (results) => {{
-                            results.data.forEach(row => {{
-                                row._dataset = file;
-                            }});
-                            resolve(results.data);
-                        }},
-                        error: reject
+        // Load embedded data
+        function loadEmbeddedData() {{
+            allData = [];
+
+            CHART_CONFIG.datasets.forEach(datasetCfg => {{
+                const datasetName = datasetCfg.name;
+                const datasetData = EMBEDDED_DATA[datasetName];
+
+                if (datasetData) {{
+                    datasetData.forEach(row => {{
+                        row._dataset = datasetName;
+                        allData.push(row);
                     }});
-                }})
-            );
+                }}
+            }});
 
-            const results = await Promise.all(promises);
-            allData = results.flat().filter(row => row.timestamp); // Filter out empty rows
-
-            // Calculate axis ranges and metadata per dataset
-            CSV_FILES.forEach(csvFile => {{
-                const datasetData = allData.filter(row => row._dataset === csvFile);
+            // Calculate axis ranges and filter metadata per dataset
+            CHART_CONFIG.datasets.forEach(datasetCfg => {{
+                const datasetName = datasetCfg.name;
+                const datasetData = allData.filter(row => row._dataset === datasetName);
 
                 if (datasetData.length > 0) {{
-                    const timestamps = datasetData.map(d => new Date(d.timestamp));
-                    const durations = datasetData.map(d => parseFloat(d.duration));
+                    const xColumn = datasetCfg.x_axis.column;
+                    const yColumn = datasetCfg.y_axis.column;
 
-                    const minTime = new Date(Math.min(...timestamps));
-                    const maxTime = new Date(Math.max(...timestamps));
-                    const minDuration = Math.min(...durations);
-                    const maxDuration = Math.max(...durations);
+                    const xValues = datasetData.map(d => new Date(d[xColumn]));
+                    const yValues = datasetData.map(d => parseFloat(d[yColumn]));
 
-                    const timePadding = (maxTime - minTime) * 0.05;
-                    const durationPadding = (maxDuration - minDuration) * 0.05;
+                    const minX = new Date(Math.min(...xValues));
+                    const maxX = new Date(Math.max(...xValues));
+                    const minY = Math.min(...yValues);
+                    const maxY = Math.max(...yValues);
 
-                    datasetAxisRanges[csvFile] = {{
-                        xaxis: [new Date(minTime.getTime() - timePadding), new Date(maxTime.getTime() + timePadding)],
-                        yaxis: [minDuration - durationPadding, maxDuration + durationPadding]
+                    const xPadding = (maxX - minX) * 0.05;
+                    const yPadding = (maxY - minY) * 0.05;
+
+                    datasetAxisRanges[datasetName] = {{
+                        xaxis: [new Date(minX.getTime() - xPadding), new Date(maxX.getTime() + xPadding)],
+                        yaxis: [minY - yPadding, maxY + yPadding]
                     }};
 
-                    // Build metadata (unique filter values) for this dataset
-                    datasetMetadata[csvFile] = {{
-                        users: [...new Set(datasetData.map(d => d.user_name))].sort(),
-                        teams: [...new Set(datasetData.map(d => d.team))].sort(),
-                        titles: [...new Set(datasetData.map(d => d.title))].sort(),
-                        locations: [...new Set(datasetData.map(d => d.location))].sort()
-                    }};
+                    // Build filter metadata
+                    const filterMetadata = {{}};
+                    datasetCfg.filters.forEach(filterCfg => {{
+                        const column = filterCfg.column;
+                        filterMetadata[column] = [...new Set(datasetData.map(d => d[column]))].sort();
+                    }});
+                    datasetFilterMetadata[datasetName] = filterMetadata;
                 }}
             }});
 
@@ -468,72 +690,90 @@ html_content = f'''<!DOCTYPE html>
         // Get selected filter values
         function getSelectedFilters() {{
             const datasetSelect = document.getElementById('dataset-select');
-            return {{
-                dataset: datasetSelect.value,
-                users: Array.from(document.querySelectorAll('[data-type="user"]:checked'))
-                    .map(cb => cb.dataset.value),
-                teams: Array.from(document.querySelectorAll('[data-type="team"]:checked'))
-                    .map(cb => cb.dataset.value),
-                titles: Array.from(document.querySelectorAll('[data-type="title"]:checked'))
-                    .map(cb => cb.dataset.value),
-                locations: Array.from(document.querySelectorAll('[data-type="location"]:checked'))
-                    .map(cb => cb.dataset.value)
+            const datasetName = datasetSelect.value;
+            const datasetCfg = CHART_CONFIG.datasets.find(d => d.name === datasetName);
+
+            const filters = {{
+                dataset: datasetName
             }};
+
+            if (datasetCfg) {{
+                datasetCfg.filters.forEach(filterCfg => {{
+                    const column = filterCfg.column;
+                    filters[column] = Array.from(document.querySelectorAll(`[data-type="${{column}}"]:checked`))
+                        .map(cb => cb.dataset.value);
+                }});
+            }}
+
+            return filters;
         }}
 
         // Apply filters and update plot
         function applyFilters() {{
             const filters = getSelectedFilters();
+            const datasetCfg = CHART_CONFIG.datasets.find(d => d.name === filters.dataset);
+            if (!datasetCfg) return;
 
             // Filter data
-            const filteredData = allData.filter(row => {{
-                return row._dataset === filters.dataset &&
-                       filters.users.includes(row.user_name) &&
-                       filters.teams.includes(row.team) &&
-                       filters.titles.includes(row.title) &&
-                       filters.locations.includes(row.location);
+            let filteredData = allData.filter(row => row._dataset === filters.dataset);
+
+            // Apply each configured filter
+            datasetCfg.filters.forEach(filterCfg => {{
+                const column = filterCfg.column;
+                if (filters[column]) {{
+                    filteredData = filteredData.filter(row => filters[column].includes(row[column]));
+                }}
             }});
 
-            // Group by user
-            const dataByUser = {{}};
+            // Use colorGroupBy for grouping and coloring
+            const groupColumn = colorGroupBy || datasetCfg.filters[0]?.column || 'user_name';
+
+            // Group by the selected color attribute
+            const dataByGroup = {{}};
             filteredData.forEach(row => {{
-                if (!dataByUser[row.user_name]) {{
-                    dataByUser[row.user_name] = [];
+                const groupValue = row[groupColumn];
+                if (!dataByGroup[groupValue]) {{
+                    dataByGroup[groupValue] = [];
                 }}
-                dataByUser[row.user_name].push(row);
+                dataByGroup[groupValue].push(row);
+            }});
+
+            // Get unique values for coloring
+            const uniqueGroups = [...new Set(filteredData.map(r => r[groupColumn]))].sort();
+
+            // Build color map for consistent coloring
+            colorMap = {{}};
+            uniqueGroups.forEach((value, idx) => {{
+                colorMap[value] = COLOR_PALETTE[idx % COLOR_PALETTE.length];
             }});
 
             // Create traces
+            const xColumn = datasetCfg.x_axis.column;
+            const yColumn = datasetCfg.y_axis.column;
             const traces = [];
-            USERS.forEach((user, idx) => {{
-                if (dataByUser[user]) {{
-                    const userData = dataByUser[user];
+
+            uniqueGroups.forEach((groupValue, idx) => {{
+                if (dataByGroup[groupValue]) {{
+                    const groupData = dataByGroup[groupValue];
+
+                    // Get all column names for customdata
+                    const columns = DATASET_METADATA[filters.dataset].columns;
+
                     traces.push({{
-                        x: userData.map(d => d.timestamp),
-                        y: userData.map(d => parseFloat(d.duration)),
+                        x: groupData.map(d => d[xColumn]),
+                        y: groupData.map(d => parseFloat(d[yColumn])),
                         mode: 'markers',
                         type: 'scatter',
-                        name: user,
+                        name: groupValue,
                         marker: {{
                             size: 10,
                             color: COLOR_PALETTE[idx % COLOR_PALETTE.length],
                             line: {{ width: 1, color: 'white' }},
                             opacity: 0.8
                         }},
-                        customdata: userData.map(d => [
-                            d.user_name, d.workflow_name, d.correlation_id,
-                            d.team, d.title, d.location
-                        ]),
-                        hovertemplate:
-                            '<b>%{{customdata[1]}}</b><br>' +
-                            'User: %{{customdata[0]}}<br>' +
-                            'Team: %{{customdata[3]}}<br>' +
-                            'Title: %{{customdata[4]}}<br>' +
-                            'Location: %{{customdata[5]}}<br>' +
-                            'Time: %{{x}}<br>' +
-                            'Duration: %{{y:.2f}}s<br>' +
-                            'Correlation ID: %{{customdata[2]}}<br>' +
-                            '<extra></extra>'
+                        customdata: groupData.map(d => columns.map(col => d[col])),
+                        hovertemplate: buildHoverTemplate(columns, xColumn, yColumn),
+                        text: groupData.map((d, i) => i) // Store index for selection
                     }});
                 }}
             }});
@@ -543,11 +783,11 @@ html_content = f'''<!DOCTYPE html>
 
             const layout = {{
                 xaxis: {{
-                    title: 'Execution Time',
+                    title: datasetCfg.x_axis.label,
                     range: axisRanges.xaxis
                 }},
                 yaxis: {{
-                    title: 'Duration (seconds)',
+                    title: datasetCfg.y_axis.label,
                     range: axisRanges.yaxis
                 }},
                 hovermode: 'closest',
@@ -570,27 +810,152 @@ html_content = f'''<!DOCTYPE html>
             }};
 
             Plotly.newPlot('plot', traces, layout, config);
+
+            // Add click handler for point selection
+            document.getElementById('plot').on('plotly_click', function(data) {{
+                const point = data.points[0];
+                const pointData = {{}};
+                const columns = DATASET_METADATA[filters.dataset].columns;
+                columns.forEach((col, idx) => {{
+                    pointData[col] = point.customdata[idx];
+                }});
+
+                // Create unique ID for this point
+                const pointId = JSON.stringify(pointData);
+
+                if (selectedPoints.has(pointId)) {{
+                    selectedPoints.delete(pointId);
+                }} else {{
+                    selectedPoints.add(pointId);
+                }}
+
+                updateDataTable();
+            }});
+
+            // Update histogram with filtered data
+            updateHistogram(filteredData);
+        }}
+
+        function buildHoverTemplate(columns, xColumn, yColumn) {{
+            let template = '<b>%{{x}}</b><br>';
+            columns.forEach((col, idx) => {{
+                if (col !== xColumn) {{
+                    template += `${{col}}: %{{customdata[${{idx}}]}}<br>`;
+                }}
+            }});
+            template += '<extra></extra>';
+            return template;
+        }}
+
+        // Update data table with selected points
+        function updateDataTable() {{
+            const container = document.getElementById('data-table-container');
+            const countSpan = document.getElementById('selected-count');
+            const exportBtn = document.getElementById('export-btn');
+
+            countSpan.textContent = selectedPoints.size;
+            exportBtn.disabled = selectedPoints.size === 0;
+
+            if (selectedPoints.size === 0) {{
+                container.innerHTML = '<div class="empty-message">Click on data points in the chart to select them</div>';
+                return;
+            }}
+
+            // Convert selected points to array
+            const selectedData = Array.from(selectedPoints).map(pointId => JSON.parse(pointId));
+
+            // Get columns from first point
+            const columns = Object.keys(selectedData[0]).filter(c => c !== '_dataset');
+
+            // Build table
+            let tableHTML = '<table class="data-table"><thead><tr>';
+            columns.forEach(col => {{
+                tableHTML += `<th>${{col}}</th>`;
+            }});
+            tableHTML += '</tr></thead><tbody>';
+
+            selectedData.forEach(point => {{
+                tableHTML += '<tr>';
+                columns.forEach(col => {{
+                    tableHTML += `<td>${{point[col] || ''}}</td>`;
+                }});
+                tableHTML += '</tr>';
+            }});
+
+            tableHTML += '</tbody></table>';
+            container.innerHTML = tableHTML;
+        }}
+
+        // Export selected points to CSV
+        function exportToCSV() {{
+            if (selectedPoints.size === 0) return;
+
+            const selectedData = Array.from(selectedPoints).map(pointId => JSON.parse(pointId));
+            const columns = Object.keys(selectedData[0]).filter(c => c !== '_dataset');
+
+            // Build CSV
+            let csv = columns.join(',') + '\\n';
+            selectedData.forEach(point => {{
+                const row = columns.map(col => {{
+                    const value = point[col] || '';
+                    // Escape commas and quotes
+                    if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {{
+                        return '"' + value.replace(/"/g, '""') + '"';
+                    }}
+                    return value;
+                }});
+                csv += row.join(',') + '\\n';
+            }});
+
+            // Download
+            const blob = new Blob([csv], {{ type: 'text/csv' }});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'selected_data.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }}
+
+        // Initialize dataset dropdown
+        function initializeFilters() {{
+            const datasetSelect = document.getElementById('dataset-select');
+            CHART_CONFIG.datasets.forEach(datasetCfg => {{
+                const option = document.createElement('option');
+                option.value = datasetCfg.name;
+                option.textContent = datasetCfg.label || datasetCfg.name;
+                datasetSelect.appendChild(option);
+            }});
+        }}
+
+        // Handle dataset change
+        function onDatasetChange() {{
+            const datasetSelect = document.getElementById('dataset-select');
+            selectedPoints.clear(); // Clear selections when changing dataset
+            updateFiltersForDataset(datasetSelect.value);
+            applyFilters();
+        }}
+
+        // Handle color by change
+        function onColorByChange() {{
+            const colorBySelect = document.getElementById('color-by-select');
+            colorGroupBy = colorBySelect.value;
+            applyFilters();
         }}
 
         // Initialize on page load
         initializeFilters();
-        loadCSVFiles().then(() => {{
-            // Update filters for first dataset after data is loaded
-            if (CSV_FILES.length > 0) {{
-                const datasetSelect = document.getElementById('dataset-select');
-                updateFiltersForDataset(datasetSelect.value || CSV_FILES[0]);
-            }}
-            applyFilters();
-            console.log('Dashboard loaded successfully');
-        }}).catch(error => {{
-            console.error('Error loading CSV files:', error);
-            document.getElementById('plot').innerHTML =
-                '<div style="padding: 40px; text-align: center; color: #d32f2f;">' +
-                '<h2>Error Loading Data</h2>' +
-                '<p>Could not load CSV files. Please ensure they are in the same directory as this HTML file.</p>' +
-                '<p style="font-family: monospace; font-size: 12px;">' + error + '</p>' +
-                '</div>';
-        }});
+        loadEmbeddedData();
+
+        // Update filters for first dataset after data is loaded
+        if (CHART_CONFIG.datasets.length > 0) {{
+            const datasetSelect = document.getElementById('dataset-select');
+            updateFiltersForDataset(datasetSelect.value || CHART_CONFIG.datasets[0].name);
+        }}
+        applyFilters();
+        console.log('Dashboard loaded successfully');
     </script>
 </body>
 </html>'''
@@ -600,27 +965,29 @@ with open('workflow_dashboard.html', 'w', encoding='utf-8') as f:
     f.write(html_content)
 
 print("\n✓ Interactive dashboard created: workflow_dashboard.html")
-print(f"✓ CSV files to be loaded: {len(csv_file_names)}")
-print(f"  • {', '.join(csv_file_names)}")
-print(f"\n✓ Filter options available:")
-print(f"  • Teams: {len(all_teams)} ({', '.join(all_teams)})")
-print(f"  • Titles: {len(all_titles)} ({', '.join(all_titles[:3])}{'...' if len(all_titles) > 3 else ''})")
-print(f"  • Locations: {len(all_locations)} ({', '.join(all_locations)})")
-print(f"  • Users: {len(all_users)} ({', '.join(all_users)})")
+print(f"✓ Configuration from: chart.yaml")
+print(f"✓ Datasets embedded: {len(embedded_data)}")
+
+for dataset_cfg in datasets_config:
+    if dataset_cfg['name'] in embedded_data:
+        print(f"  • {dataset_cfg['label']} ({dataset_cfg['csv_file']})")
+
 print("\nFeatures:")
-print("  • Multi-select filters on the right side")
-print("  • CSV files loaded dynamically (not embedded)")
-print("  • Select multiple teams, titles, locations, or datasets")
-print("  • Click 'Apply Filters' to update the visualization")
-print("  • Viewport stays fixed when filtering")
-print("  • Click legend to toggle individual users")
+print("  • YAML-based configuration (chart.yaml)")
+print("  • Multi-select data points with click")
+print("  • Selected points table with CSV export")
+print("  • Duration histogram with percentile markers (50th, 75th, 95th, 97th)")
+print("  • Collapsible histogram and filter panels for full-screen chart view")
+print("  • CSV data embedded directly in HTML (no external files needed)")
+print("  • Dataset-specific filter options")
+print("  • Per-dataset viewport optimization")
+print("  • Dynamic filter updates (no apply button needed)")
 print("\n" + "="*60)
 print("  🚀 How to View the Dashboard")
 print("="*60)
-print("\nRun the local web server:")
-print("  uv run start_server.py")
-print("\nOr use Python's built-in server:")
-print("  python -m http.server 8000")
-print("  Then visit: http://localhost:8000/workflow_dashboard.html")
-print("\n⚠️  Don't open the HTML file directly - browsers will block CSV loading!")
+print("\n✨ Simply open the file in your browser:")
+print("  • Double-click workflow_dashboard.html")
+print("  • Or open it from your browser's File menu")
+print("\n✅ No web server required! Data is embedded in the HTML.")
+print("\n📝 To reconfigure: Edit chart.yaml and run 'uv run visualize.py'")
 print("="*60)

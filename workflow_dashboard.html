@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Workflow Execution Dashboard</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -16,15 +15,96 @@
         .container {
             display: flex;
             gap: 20px;
-            max-width: 1800px;
+            max-width: 100%;
             margin: 0 auto;
         }
-        .chart-container {
+        .main-content {
             flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .chart-container {
             background: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        .table-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-height: 400px;
+            overflow: auto;
+        }
+        .table-container h3 {
+            margin: 0 0 15px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .export-btn {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        .export-btn:hover {
+            background: #45a049;
+        }
+        .export-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .data-table th {
+            background: #f5f5f5;
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #ddd;
+            position: sticky;
+            top: 0;
+        }
+        .data-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .data-table tr:hover {
+            background: #f9f9f9;
+        }
+        .empty-message {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        .histogram-container {
+            width: 280px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+            transition: all 0.3s ease;
+        }
+        .histogram-container.collapsed {
+            width: 50px;
+            padding: 10px;
+        }
+        .histogram-container.collapsed .histogram-content {
+            display: none;
         }
         .filters-container {
             width: 280px;
@@ -35,6 +115,44 @@
             height: fit-content;
             position: sticky;
             top: 20px;
+            transition: all 0.3s ease;
+        }
+        .filters-container.collapsed {
+            width: 50px;
+            padding: 10px;
+        }
+        .filters-container.collapsed .filters-content {
+            display: none;
+        }
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+        .collapse-btn {
+            background: #f5f5f5;
+            border: none;
+            border-radius: 4px;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 16px;
+        }
+        .collapse-btn:hover {
+            background: #e0e0e0;
+        }
+        .collapsed .collapse-btn {
+            transform: rotate(180deg);
         }
         .filter-section {
             margin-bottom: 12px;
@@ -146,6 +264,21 @@
             width: 100%;
             height: 700px;
         }
+        #histogram {
+            width: 100%;
+            height: 500px;
+        }
+        .percentile-info {
+            font-size: 11px;
+            color: #666;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        .percentile-info div {
+            margin: 4px 0;
+        }
         .info-text {
             font-size: 12px;
             color: #666;
@@ -173,78 +306,78 @@
 <body>
     <h1>Workflow Execution Dashboard</h1>
     <div class="container">
-        <div class="chart-container">
-            <div id="plot"></div>
+        <div class="main-content">
+            <div class="chart-container">
+                <div id="plot"></div>
+            </div>
+            <div class="table-container">
+                <h3>
+                    <span>📋 Selected Data Points (<span id="selected-count">0</span>)</span>
+                    <button class="export-btn" id="export-btn" onclick="exportToCSV()" disabled>📥 Export CSV</button>
+                </h3>
+                <div id="data-table-container">
+                    <div class="empty-message">Click on data points in the chart to select them</div>
+                </div>
+            </div>
         </div>
-        <div class="filters-container">
+        <div class="histogram-container" id="histogram-panel">
+            <div class="panel-header">
+                <span class="panel-title">📊 Duration Distribution</span>
+                <button class="collapse-btn" onclick="togglePanel('histogram-panel')" title="Collapse">◀</button>
+            </div>
+            <div class="histogram-content">
+                <div id="histogram"></div>
+                <div class="percentile-info" id="percentile-info"></div>
+            </div>
+        </div>
+        <div class="filters-container" id="filters-panel">
+            <div class="panel-header">
+                <span class="panel-title">🔍 Filters</span>
+                <button class="collapse-btn" onclick="togglePanel('filters-panel')" title="Collapse">◀</button>
+            </div>
+            <div class="filters-content">
             <div class="filter-section">
                 <h3 onclick="toggleSection(this)">📁 Dataset</h3>
                 <div class="filter-content">
-                    <select id="dataset-select" class="filter-select" onchange="updateFiltersForDataset(this.value); applyFilters();">
+                    <select id="dataset-select" class="filter-select" onchange="onDatasetChange()">
                     </select>
                 </div>
             </div>
 
             <div class="filter-section">
-                <h3 onclick="toggleSection(this)">👥 Users</h3>
+                <h3 onclick="toggleSection(this)">🎨 Color By</h3>
                 <div class="filter-content">
-                    <div class="filter-options" id="user-filters"></div>
-                    <div class="filter-actions">
-                        <button class="btn" onclick="selectAllUsers()">All</button>
-                        <button class="btn" onclick="clearAllUsers()">None</button>
-                    </div>
+                    <select id="color-by-select" class="filter-select" onchange="onColorByChange()">
+                    </select>
                 </div>
             </div>
 
-            <div class="filter-section">
-                <h3 onclick="toggleSection(this)" class="collapsed">🏢 Teams</h3>
-                <div class="filter-content collapsed">
-                    <div class="filter-options" id="team-filters"></div>
-                    <div class="filter-actions">
-                        <button class="btn" onclick="selectAllTeams()">All</button>
-                        <button class="btn" onclick="clearAllTeams()">None</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="filter-section">
-                <h3 onclick="toggleSection(this)" class="collapsed">💼 Titles</h3>
-                <div class="filter-content collapsed">
-                    <div class="filter-options" id="title-filters"></div>
-                    <div class="filter-actions">
-                        <button class="btn" onclick="selectAllTitles()">All</button>
-                        <button class="btn" onclick="clearAllTitles()">None</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="filter-section">
-                <h3 onclick="toggleSection(this)" class="collapsed">📍 Locations</h3>
-                <div class="filter-content collapsed">
-                    <div class="filter-options" id="location-filters"></div>
-                    <div class="filter-actions">
-                        <button class="btn" onclick="selectAllLocations()">All</button>
-                        <button class="btn" onclick="clearAllLocations()">None</button>
-                    </div>
-                </div>
-            </div>
+            <div id="dynamic-filters"></div>
 
             <div class="info-text">
                 💡 <strong>Click section headers</strong> to collapse/expand filters. Filters update dynamically.
                 <br><br>
                 📊 Each dataset has its own viewport and filter options specific to that dataset.
                 <br><br>
-                ℹ️ To add more CSV files: Place them in this folder and run <code>uv run visualize.py</code> to regenerate.
+                📈 Histogram shows duration distribution with percentile markers.
+                <br><br>
+                🔽 Click the collapse buttons to hide histogram or filters for full-screen chart view.
+                <br><br>
+                🖱️ Click data points to select them. Selected points appear in the table below the chart.
+                <br><br>
+                ℹ️ To reconfigure: Edit <code>chart.yaml</code> and run <code>uv run visualize.py</code> to regenerate.
+                <br><br>
+                ✨ CSV data is embedded - no web server required! Just open this HTML file in your browser.
+            </div>
             </div>
         </div>
     </div>
 
     <script>
-        const CSV_FILES = ["workflow_data.csv", "workflow_data2.csv"];
-        const TEAMS = ["Analytics", "Data Science", "DevOps", "Engineering", "Operations", "Platform", "QA", "Security"];
-        const TITLES = ["Data Engineer", "Data Scientist", "DevOps Engineer", "DevOps Specialist", "ML Engineer", "Platform Engineer", "QA Lead", "Security Engineer", "Senior Analyst", "Software Engineer"];
-        const LOCATIONS = ["Austin", "Berlin", "London", "New York", "Remote", "San Francisco", "Seattle", "Singapore", "Tokyo"];
-        const USERS = ["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace", "Henry", "Isabel", "Jack"];
+        // Configuration from YAML
+        const CHART_CONFIG = {"title": "Workflow Execution Dashboard", "datasets": [{"name": "workflow_data.csv", "label": "November 2025 Workflows", "csv_file": "workflow_data.csv", "x_axis": {"column": "timestamp", "label": "Execution Time"}, "y_axis": {"column": "duration", "label": "Duration (seconds)"}, "filters": [{"column": "user_name", "label": "Users", "icon": "\ud83d\udc65"}, {"column": "is_sla_met", "label": "SLA Status", "icon": "\u2705"}, {"column": "team", "label": "Teams", "icon": "\ud83c\udfe2"}, {"column": "title", "label": "Titles", "icon": "\ud83d\udcbc"}, {"column": "location", "label": "Locations", "icon": "\ud83d\udccd"}]}, {"name": "workflow_data2.csv", "label": "December 2025 Workflows", "csv_file": "workflow_data2.csv", "x_axis": {"column": "timestamp", "label": "Execution Time"}, "y_axis": {"column": "duration", "label": "Duration (seconds)"}, "filters": [{"column": "user_name", "label": "Users", "icon": "\ud83d\udc65"}, {"column": "is_sla_met", "label": "SLA Status", "icon": "\u2705"}, {"column": "team", "label": "Teams", "icon": "\ud83c\udfe2"}, {"column": "title", "label": "Titles", "icon": "\ud83d\udcbc"}, {"column": "location", "label": "Locations", "icon": "\ud83d\udccd"}]}]};
+        const EMBEDDED_DATA = {"workflow_data.csv": [{"user_name": "Bob", "workflow_name": "Data Processing", "timestamp": "2025-11-08 16:19:00", "duration": 100.48, "correlation_id": "corr-0001-7539", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 218.22, "is_sla_met": "Yes"}, {"user_name": "Bob", "workflow_name": "Report Generation", "timestamp": "2025-12-01 23:46:00", "duration": 138.68, "correlation_id": "corr-0002-1587", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 213.86, "is_sla_met": "Yes"}, {"user_name": "Diana", "workflow_name": "Data Validation", "timestamp": "2025-11-08 20:05:00", "duration": 241.57, "correlation_id": "corr-0003-2830", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 238.09, "is_sla_met": "No"}, {"user_name": "Eve", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-19 13:39:00", "duration": 62.47, "correlation_id": "corr-0004-6247", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 230.19, "is_sla_met": "Yes"}, {"user_name": "Diana", "workflow_name": "Data Processing", "timestamp": "2025-11-10 01:42:00", "duration": 88.91, "correlation_id": "corr-0005-1477", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 245.29, "is_sla_met": "Yes"}, {"user_name": "Charlie", "workflow_name": "Data Processing", "timestamp": "2025-11-22 16:43:00", "duration": 198.5, "correlation_id": "corr-0006-4858", "team": "Analytics", "title": "Senior Analyst", "location": "London", "expected_duration": 184.32, "is_sla_met": "No"}, {"user_name": "Alice", "workflow_name": "Report Generation", "timestamp": "2025-11-17 20:53:00", "duration": 147.31, "correlation_id": "corr-0007-6690", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 177.32, "is_sla_met": "Yes"}, {"user_name": "Bob", "workflow_name": "Data Processing", "timestamp": "2025-11-11 03:30:00", "duration": 284.2, "correlation_id": "corr-0008-7919", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 174.17, "is_sla_met": "No"}, {"user_name": "Eve", "workflow_name": "Data Validation", "timestamp": "2025-11-27 12:30:00", "duration": 256.62, "correlation_id": "corr-0009-6922", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 213.48, "is_sla_met": "No"}, {"user_name": "Charlie", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-07 05:49:00", "duration": 279.57, "correlation_id": "corr-0010-6642", "team": "Analytics", "title": "Senior Analyst", "location": "London", "expected_duration": 225.18, "is_sla_met": "No"}, {"user_name": "Alice", "workflow_name": "Report Generation", "timestamp": "2025-11-26 20:10:00", "duration": 286.3, "correlation_id": "corr-0011-5187", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 241.9, "is_sla_met": "No"}, {"user_name": "Alice", "workflow_name": "Report Generation", "timestamp": "2025-11-29 07:42:00", "duration": 55.81, "correlation_id": "corr-0012-7215", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 204.25, "is_sla_met": "Yes"}, {"user_name": "Alice", "workflow_name": "Data Validation", "timestamp": "2025-11-08 14:39:00", "duration": 72.61, "correlation_id": "corr-0013-2051", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 212.15, "is_sla_met": "Yes"}, {"user_name": "Diana", "workflow_name": "Data Processing", "timestamp": "2025-11-12 11:32:00", "duration": 204.81, "correlation_id": "corr-0014-7560", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 238.82, "is_sla_met": "Yes"}, {"user_name": "Eve", "workflow_name": "Model Training", "timestamp": "2025-11-28 13:27:00", "duration": 21.36, "correlation_id": "corr-0015-9666", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 181.46, "is_sla_met": "Yes"}, {"user_name": "Eve", "workflow_name": "Data Validation", "timestamp": "2025-12-01 18:31:00", "duration": 16.42, "correlation_id": "corr-0016-1273", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 185.52, "is_sla_met": "Yes"}, {"user_name": "Bob", "workflow_name": "Model Training", "timestamp": "2025-11-02 22:45:00", "duration": 245.97, "correlation_id": "corr-0017-2361", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 175.0, "is_sla_met": "No"}, {"user_name": "Charlie", "workflow_name": "Model Training", "timestamp": "2025-11-01 14:30:00", "duration": 47.24, "correlation_id": "corr-0018-5699", "team": "Analytics", "title": "Senior Analyst", "location": "London", "expected_duration": 158.15, "is_sla_met": "Yes"}, {"user_name": "Charlie", "workflow_name": "Model Training", "timestamp": "2025-11-30 00:28:00", "duration": 161.12, "correlation_id": "corr-0019-7978", "team": "Analytics", "title": "Senior Analyst", "location": "London", "expected_duration": 163.17, "is_sla_met": "Yes"}, {"user_name": "Eve", "workflow_name": "Data Validation", "timestamp": "2025-11-13 03:35:00", "duration": 276.71, "correlation_id": "corr-0020-1978", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 194.0, "is_sla_met": "No"}, {"user_name": "Eve", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-26 12:36:00", "duration": 69.74, "correlation_id": "corr-0021-8230", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 238.69, "is_sla_met": "Yes"}, {"user_name": "Alice", "workflow_name": "Data Processing", "timestamp": "2025-11-26 18:28:00", "duration": 185.0, "correlation_id": "corr-0022-6486", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 162.85, "is_sla_met": "No"}, {"user_name": "Charlie", "workflow_name": "Data Validation", "timestamp": "2025-11-10 00:39:00", "duration": 289.08, "correlation_id": "corr-0023-3336", "team": "Analytics", "title": "Senior Analyst", "location": "London", "expected_duration": 196.73, "is_sla_met": "No"}, {"user_name": "Diana", "workflow_name": "Data Processing", "timestamp": "2025-11-11 22:24:00", "duration": 19.17, "correlation_id": "corr-0024-3639", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 225.78, "is_sla_met": "Yes"}, {"user_name": "Diana", "workflow_name": "Data Processing", "timestamp": "2025-11-02 05:29:00", "duration": 250.43, "correlation_id": "corr-0025-7661", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 236.8, "is_sla_met": "No"}, {"user_name": "Bob", "workflow_name": "Model Training", "timestamp": "2025-11-23 08:18:00", "duration": 226.98, "correlation_id": "corr-0026-4755", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 179.66, "is_sla_met": "No"}, {"user_name": "Charlie", "workflow_name": "Data Processing", "timestamp": "2025-11-24 04:17:00", "duration": 276.06, "correlation_id": "corr-0027-1009", "team": "Analytics", "title": "Senior Analyst", "location": "London", "expected_duration": 157.03, "is_sla_met": "No"}, {"user_name": "Eve", "workflow_name": "Model Training", "timestamp": "2025-11-25 09:51:00", "duration": 198.51, "correlation_id": "corr-0028-8912", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 244.57, "is_sla_met": "Yes"}, {"user_name": "Alice", "workflow_name": "Data Processing", "timestamp": "2025-11-08 07:28:00", "duration": 84.4, "correlation_id": "corr-0029-5343", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 172.24, "is_sla_met": "Yes"}, {"user_name": "Bob", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-25 05:10:00", "duration": 263.78, "correlation_id": "corr-0030-5133", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 166.35, "is_sla_met": "No"}, {"user_name": "Alice", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-20 17:53:00", "duration": 82.19, "correlation_id": "corr-0031-6033", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 249.56, "is_sla_met": "Yes"}, {"user_name": "Diana", "workflow_name": "Model Training", "timestamp": "2025-11-19 19:25:00", "duration": 206.24, "correlation_id": "corr-0032-3045", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 218.5, "is_sla_met": "Yes"}, {"user_name": "Eve", "workflow_name": "Model Training", "timestamp": "2025-11-11 06:02:00", "duration": 170.05, "correlation_id": "corr-0033-7011", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 194.47, "is_sla_met": "Yes"}, {"user_name": "Diana", "workflow_name": "Model Training", "timestamp": "2025-11-20 14:11:00", "duration": 290.03, "correlation_id": "corr-0034-5931", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 193.58, "is_sla_met": "No"}, {"user_name": "Diana", "workflow_name": "Data Validation", "timestamp": "2025-11-19 12:31:00", "duration": 154.19, "correlation_id": "corr-0035-4509", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 158.7, "is_sla_met": "Yes"}, {"user_name": "Eve", "workflow_name": "Data Processing", "timestamp": "2025-11-18 07:50:00", "duration": 259.05, "correlation_id": "corr-0036-9369", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 204.46, "is_sla_met": "No"}, {"user_name": "Alice", "workflow_name": "Model Training", "timestamp": "2025-11-19 02:39:00", "duration": 32.06, "correlation_id": "corr-0037-2361", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 213.75, "is_sla_met": "Yes"}, {"user_name": "Diana", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-19 14:00:00", "duration": 49.28, "correlation_id": "corr-0038-7588", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 200.66, "is_sla_met": "Yes"}, {"user_name": "Charlie", "workflow_name": "Model Training", "timestamp": "2025-11-26 03:58:00", "duration": 151.58, "correlation_id": "corr-0039-9057", "team": "Analytics", "title": "Senior Analyst", "location": "London", "expected_duration": 166.03, "is_sla_met": "Yes"}, {"user_name": "Eve", "workflow_name": "Model Training", "timestamp": "2025-11-29 12:14:00", "duration": 49.89, "correlation_id": "corr-0040-8641", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 163.53, "is_sla_met": "Yes"}, {"user_name": "Alice", "workflow_name": "Data Processing", "timestamp": "2025-11-21 11:26:00", "duration": 26.23, "correlation_id": "corr-0041-5685", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 155.06, "is_sla_met": "Yes"}, {"user_name": "Alice", "workflow_name": "Data Processing", "timestamp": "2025-11-05 03:11:00", "duration": 255.83, "correlation_id": "corr-0042-9497", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 200.03, "is_sla_met": "No"}, {"user_name": "Charlie", "workflow_name": "Report Generation", "timestamp": "2025-11-01 03:54:00", "duration": 169.86, "correlation_id": "corr-0043-6577", "team": "Analytics", "title": "Senior Analyst", "location": "London", "expected_duration": 229.21, "is_sla_met": "Yes"}, {"user_name": "Charlie", "workflow_name": "Data Validation", "timestamp": "2025-11-11 11:48:00", "duration": 291.01, "correlation_id": "corr-0044-4270", "team": "Analytics", "title": "Senior Analyst", "location": "London", "expected_duration": 195.04, "is_sla_met": "No"}, {"user_name": "Eve", "workflow_name": "Data Validation", "timestamp": "2025-11-23 08:36:00", "duration": 51.52, "correlation_id": "corr-0045-1964", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 191.31, "is_sla_met": "Yes"}, {"user_name": "Alice", "workflow_name": "Data Processing", "timestamp": "2025-11-27 08:03:00", "duration": 114.93, "correlation_id": "corr-0046-9652", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 169.83, "is_sla_met": "Yes"}, {"user_name": "Bob", "workflow_name": "Data Processing", "timestamp": "2025-11-12 04:52:00", "duration": 289.41, "correlation_id": "corr-0047-3332", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 178.98, "is_sla_met": "No"}, {"user_name": "Eve", "workflow_name": "Data Validation", "timestamp": "2025-11-01 04:13:00", "duration": 205.97, "correlation_id": "corr-0048-2451", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 209.31, "is_sla_met": "Yes"}, {"user_name": "Bob", "workflow_name": "Data Processing", "timestamp": "2025-11-17 16:01:00", "duration": 30.89, "correlation_id": "corr-0049-8506", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 204.21, "is_sla_met": "Yes"}, {"user_name": "Alice", "workflow_name": "Model Training", "timestamp": "2025-11-28 00:04:00", "duration": 278.18, "correlation_id": "corr-0050-4253", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 223.23, "is_sla_met": "No"}, {"user_name": "Bob", "workflow_name": "Data Processing", "timestamp": "2025-11-18 13:37:00", "duration": 227.71, "correlation_id": "corr-0051-2454", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 205.23, "is_sla_met": "No"}, {"user_name": "Bob", "workflow_name": "Data Processing", "timestamp": "2025-11-03 18:50:00", "duration": 69.13, "correlation_id": "corr-0052-9889", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 201.33, "is_sla_met": "Yes"}, {"user_name": "Bob", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-27 01:06:00", "duration": 260.86, "correlation_id": "corr-0053-7553", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 167.44, "is_sla_met": "No"}, {"user_name": "Eve", "workflow_name": "Data Validation", "timestamp": "2025-11-17 22:27:00", "duration": 41.73, "correlation_id": "corr-0054-4432", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 235.29, "is_sla_met": "Yes"}, {"user_name": "Alice", "workflow_name": "Model Training", "timestamp": "2025-11-12 06:49:00", "duration": 85.93, "correlation_id": "corr-0055-4094", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 172.78, "is_sla_met": "Yes"}, {"user_name": "Diana", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-15 22:05:00", "duration": 30.22, "correlation_id": "corr-0056-3213", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 219.6, "is_sla_met": "Yes"}, {"user_name": "Alice", "workflow_name": "Report Generation", "timestamp": "2025-11-03 12:19:00", "duration": 187.83, "correlation_id": "corr-0057-9483", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 207.52, "is_sla_met": "Yes"}, {"user_name": "Diana", "workflow_name": "Report Generation", "timestamp": "2025-11-20 08:37:00", "duration": 159.81, "correlation_id": "corr-0058-8262", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 226.16, "is_sla_met": "Yes"}, {"user_name": "Charlie", "workflow_name": "ETL Pipeline", "timestamp": "2025-12-01 00:04:00", "duration": 171.7, "correlation_id": "corr-0059-4831", "team": "Analytics", "title": "Senior Analyst", "location": "London", "expected_duration": 231.03, "is_sla_met": "Yes"}, {"user_name": "Bob", "workflow_name": "Data Validation", "timestamp": "2025-11-03 14:16:00", "duration": 181.71, "correlation_id": "corr-0060-3377", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 223.17, "is_sla_met": "Yes"}, {"user_name": "Charlie", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-07 03:27:00", "duration": 80.45, "correlation_id": "corr-0061-8728", "team": "Analytics", "title": "Senior Analyst", "location": "London", "expected_duration": 221.97, "is_sla_met": "Yes"}, {"user_name": "Charlie", "workflow_name": "Model Training", "timestamp": "2025-11-12 19:49:00", "duration": 75.65, "correlation_id": "corr-0062-1198", "team": "Analytics", "title": "Senior Analyst", "location": "London", "expected_duration": 237.51, "is_sla_met": "Yes"}, {"user_name": "Bob", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-04 17:22:00", "duration": 241.91, "correlation_id": "corr-0063-4049", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 218.44, "is_sla_met": "No"}, {"user_name": "Bob", "workflow_name": "Data Validation", "timestamp": "2025-11-24 18:59:00", "duration": 73.68, "correlation_id": "corr-0064-1591", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 244.91, "is_sla_met": "Yes"}, {"user_name": "Diana", "workflow_name": "Model Training", "timestamp": "2025-11-26 14:30:00", "duration": 129.25, "correlation_id": "corr-0065-3529", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 213.7, "is_sla_met": "Yes"}, {"user_name": "Charlie", "workflow_name": "Report Generation", "timestamp": "2025-11-18 12:10:00", "duration": 98.3, "correlation_id": "corr-0066-8352", "team": "Analytics", "title": "Senior Analyst", "location": "London", "expected_duration": 214.45, "is_sla_met": "Yes"}, {"user_name": "Alice", "workflow_name": "Model Training", "timestamp": "2025-11-15 21:39:00", "duration": 224.43, "correlation_id": "corr-0067-9730", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 209.41, "is_sla_met": "No"}, {"user_name": "Alice", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-13 06:54:00", "duration": 45.07, "correlation_id": "corr-0068-2794", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 212.51, "is_sla_met": "Yes"}, {"user_name": "Eve", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-27 04:29:00", "duration": 221.69, "correlation_id": "corr-0069-8220", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 208.04, "is_sla_met": "No"}, {"user_name": "Eve", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-06 17:09:00", "duration": 151.55, "correlation_id": "corr-0070-5984", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 194.17, "is_sla_met": "Yes"}, {"user_name": "Bob", "workflow_name": "Report Generation", "timestamp": "2025-12-01 15:26:00", "duration": 205.06, "correlation_id": "corr-0071-8919", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 183.21, "is_sla_met": "No"}, {"user_name": "Diana", "workflow_name": "Data Processing", "timestamp": "2025-11-01 11:12:00", "duration": 81.2, "correlation_id": "corr-0072-9574", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 219.02, "is_sla_met": "Yes"}, {"user_name": "Eve", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-29 04:47:00", "duration": 279.49, "correlation_id": "corr-0073-7007", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 151.35, "is_sla_met": "No"}, {"user_name": "Diana", "workflow_name": "Report Generation", "timestamp": "2025-11-26 16:05:00", "duration": 299.08, "correlation_id": "corr-0074-7985", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 220.51, "is_sla_met": "No"}, {"user_name": "Alice", "workflow_name": "Report Generation", "timestamp": "2025-11-30 21:15:00", "duration": 54.8, "correlation_id": "corr-0075-5537", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 242.12, "is_sla_met": "Yes"}, {"user_name": "Diana", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-01 12:51:00", "duration": 11.96, "correlation_id": "corr-0076-3913", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 212.44, "is_sla_met": "Yes"}, {"user_name": "Bob", "workflow_name": "Data Processing", "timestamp": "2025-11-15 08:14:00", "duration": 108.92, "correlation_id": "corr-0077-3167", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 241.75, "is_sla_met": "Yes"}, {"user_name": "Diana", "workflow_name": "Report Generation", "timestamp": "2025-11-20 23:27:00", "duration": 143.88, "correlation_id": "corr-0078-5375", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 172.2, "is_sla_met": "Yes"}, {"user_name": "Bob", "workflow_name": "Model Training", "timestamp": "2025-11-29 07:38:00", "duration": 165.11, "correlation_id": "corr-0079-5105", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 194.53, "is_sla_met": "Yes"}, {"user_name": "Alice", "workflow_name": "Data Processing", "timestamp": "2025-11-03 16:38:00", "duration": 292.18, "correlation_id": "corr-0080-8815", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 161.54, "is_sla_met": "No"}, {"user_name": "Diana", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-11 11:44:00", "duration": 63.21, "correlation_id": "corr-0081-7733", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 167.11, "is_sla_met": "Yes"}, {"user_name": "Alice", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-01 12:14:00", "duration": 69.89, "correlation_id": "corr-0082-7582", "team": "Engineering", "title": "Data Engineer", "location": "New York", "expected_duration": 166.68, "is_sla_met": "Yes"}, {"user_name": "Eve", "workflow_name": "Data Processing", "timestamp": "2025-11-25 16:23:00", "duration": 57.39, "correlation_id": "corr-0083-9548", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 199.35, "is_sla_met": "Yes"}, {"user_name": "Bob", "workflow_name": "Report Generation", "timestamp": "2025-11-29 13:49:00", "duration": 235.58, "correlation_id": "corr-0084-7646", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 209.94, "is_sla_met": "No"}, {"user_name": "Eve", "workflow_name": "Data Processing", "timestamp": "2025-11-15 10:03:00", "duration": 263.23, "correlation_id": "corr-0085-9905", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 240.23, "is_sla_met": "No"}, {"user_name": "Diana", "workflow_name": "Data Processing", "timestamp": "2025-11-04 14:44:00", "duration": 288.85, "correlation_id": "corr-0086-1337", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 177.49, "is_sla_met": "No"}, {"user_name": "Eve", "workflow_name": "Data Validation", "timestamp": "2025-11-16 06:26:00", "duration": 253.16, "correlation_id": "corr-0087-8252", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 172.51, "is_sla_met": "No"}, {"user_name": "Eve", "workflow_name": "Report Generation", "timestamp": "2025-11-12 11:58:00", "duration": 183.04, "correlation_id": "corr-0088-1362", "team": "Operations", "title": "DevOps Engineer", "location": "Tokyo", "expected_duration": 180.9, "is_sla_met": "No"}, {"user_name": "Bob", "workflow_name": "Report Generation", "timestamp": "2025-11-18 19:48:00", "duration": 67.55, "correlation_id": "corr-0089-2150", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 201.24, "is_sla_met": "Yes"}, {"user_name": "Diana", "workflow_name": "Model Training", "timestamp": "2025-11-23 17:04:00", "duration": 245.85, "correlation_id": "corr-0090-8950", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 184.71, "is_sla_met": "No"}, {"user_name": "Charlie", "workflow_name": "Report Generation", "timestamp": "2025-11-09 11:10:00", "duration": 204.71, "correlation_id": "corr-0091-8573", "team": "Analytics", "title": "Senior Analyst", "location": "London", "expected_duration": 242.69, "is_sla_met": "Yes"}, {"user_name": "Charlie", "workflow_name": "Model Training", "timestamp": "2025-12-01 00:48:00", "duration": 56.15, "correlation_id": "corr-0092-1462", "team": "Analytics", "title": "Senior Analyst", "location": "London", "expected_duration": 203.32, "is_sla_met": "Yes"}, {"user_name": "Bob", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-25 22:50:00", "duration": 230.63, "correlation_id": "corr-0093-8169", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 237.87, "is_sla_met": "Yes"}, {"user_name": "Charlie", "workflow_name": "Report Generation", "timestamp": "2025-11-29 17:24:00", "duration": 220.38, "correlation_id": "corr-0094-4424", "team": "Analytics", "title": "Senior Analyst", "location": "London", "expected_duration": 244.56, "is_sla_met": "Yes"}, {"user_name": "Diana", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-11 18:21:00", "duration": 95.35, "correlation_id": "corr-0095-5193", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 156.99, "is_sla_met": "Yes"}, {"user_name": "Diana", "workflow_name": "Model Training", "timestamp": "2025-11-06 01:24:00", "duration": 178.93, "correlation_id": "corr-0096-6849", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 198.85, "is_sla_met": "Yes"}, {"user_name": "Diana", "workflow_name": "ETL Pipeline", "timestamp": "2025-11-03 09:07:00", "duration": 125.07, "correlation_id": "corr-0097-9266", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 232.83, "is_sla_met": "Yes"}, {"user_name": "Diana", "workflow_name": "Data Processing", "timestamp": "2025-11-20 06:40:00", "duration": 167.48, "correlation_id": "corr-0098-9202", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 168.0, "is_sla_met": "Yes"}, {"user_name": "Diana", "workflow_name": "Data Validation", "timestamp": "2025-11-12 00:28:00", "duration": 261.98, "correlation_id": "corr-0099-8204", "team": "Data Science", "title": "Data Scientist", "location": "Remote", "expected_duration": 165.45, "is_sla_met": "No"}, {"user_name": "Bob", "workflow_name": "Report Generation", "timestamp": "2025-11-03 01:45:00", "duration": 75.53, "correlation_id": "corr-0100-1925", "team": "Data Science", "title": "ML Engineer", "location": "San Francisco", "expected_duration": 184.19, "is_sla_met": "Yes"}], "workflow_data2.csv": [{"user_name": "Frank", "workflow_name": "Security Scan", "timestamp": "2025-12-01 12:36:00", "duration": 270.68, "correlation_id": "corr-0001-9487", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 259.76, "is_sla_met": "No"}, {"user_name": "Frank", "workflow_name": "API Testing", "timestamp": "2025-12-01 06:09:00", "duration": 312.82, "correlation_id": "corr-0002-6463", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 277.37, "is_sla_met": "No"}, {"user_name": "Jack", "workflow_name": "Database Migration", "timestamp": "2025-12-06 17:16:00", "duration": 275.43, "correlation_id": "corr-0003-8399", "team": "Platform", "title": "Software Engineer", "location": "Singapore", "expected_duration": 277.17, "is_sla_met": "Yes"}, {"user_name": "Jack", "workflow_name": "Security Scan", "timestamp": "2025-12-04 04:42:00", "duration": 299.24, "correlation_id": "corr-0004-5745", "team": "Platform", "title": "Software Engineer", "location": "Singapore", "expected_duration": 299.53, "is_sla_met": "Yes"}, {"user_name": "Frank", "workflow_name": "Deployment", "timestamp": "2025-12-01 15:08:00", "duration": 254.74, "correlation_id": "corr-0005-4884", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 256.25, "is_sla_met": "Yes"}, {"user_name": "Frank", "workflow_name": "Security Scan", "timestamp": "2025-12-07 13:59:00", "duration": 348.38, "correlation_id": "corr-0006-7390", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 226.54, "is_sla_met": "No"}, {"user_name": "Grace", "workflow_name": "Code Review", "timestamp": "2025-12-01 20:13:00", "duration": 389.85, "correlation_id": "corr-0007-5346", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 208.5, "is_sla_met": "No"}, {"user_name": "Jack", "workflow_name": "Deployment", "timestamp": "2025-12-02 01:41:00", "duration": 209.62, "correlation_id": "corr-0008-6706", "team": "Platform", "title": "Software Engineer", "location": "Singapore", "expected_duration": 291.92, "is_sla_met": "Yes"}, {"user_name": "Grace", "workflow_name": "Deployment", "timestamp": "2025-12-08 04:54:00", "duration": 219.44, "correlation_id": "corr-0009-3567", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 270.04, "is_sla_met": "Yes"}, {"user_name": "Isabel", "workflow_name": "Deployment", "timestamp": "2025-12-07 02:21:00", "duration": 290.69, "correlation_id": "corr-0010-9643", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 269.58, "is_sla_met": "No"}, {"user_name": "Grace", "workflow_name": "Code Review", "timestamp": "2025-12-01 18:21:00", "duration": 322.98, "correlation_id": "corr-0011-7258", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 297.2, "is_sla_met": "No"}, {"user_name": "Jack", "workflow_name": "Code Review", "timestamp": "2025-12-02 16:16:00", "duration": 318.0, "correlation_id": "corr-0012-8683", "team": "Platform", "title": "Software Engineer", "location": "Singapore", "expected_duration": 218.13, "is_sla_met": "No"}, {"user_name": "Grace", "workflow_name": "Database Migration", "timestamp": "2025-12-03 09:29:00", "duration": 413.85, "correlation_id": "corr-0013-4077", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 237.0, "is_sla_met": "No"}, {"user_name": "Henry", "workflow_name": "Security Scan", "timestamp": "2025-12-02 15:57:00", "duration": 281.77, "correlation_id": "corr-0014-9378", "team": "DevOps", "title": "DevOps Specialist", "location": "Austin", "expected_duration": 292.49, "is_sla_met": "Yes"}, {"user_name": "Grace", "workflow_name": "Security Scan", "timestamp": "2025-12-04 06:06:00", "duration": 211.21, "correlation_id": "corr-0015-1751", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 258.92, "is_sla_met": "Yes"}, {"user_name": "Henry", "workflow_name": "API Testing", "timestamp": "2025-12-01 13:34:00", "duration": 400.42, "correlation_id": "corr-0016-7032", "team": "DevOps", "title": "DevOps Specialist", "location": "Austin", "expected_duration": 288.1, "is_sla_met": "No"}, {"user_name": "Isabel", "workflow_name": "Security Scan", "timestamp": "2025-12-08 23:23:00", "duration": 190.92, "correlation_id": "corr-0017-7006", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 212.27, "is_sla_met": "Yes"}, {"user_name": "Henry", "workflow_name": "Security Scan", "timestamp": "2025-12-03 23:15:00", "duration": 185.65, "correlation_id": "corr-0018-8968", "team": "DevOps", "title": "DevOps Specialist", "location": "Austin", "expected_duration": 287.97, "is_sla_met": "Yes"}, {"user_name": "Henry", "workflow_name": "Code Review", "timestamp": "2025-12-03 01:46:00", "duration": 236.57, "correlation_id": "corr-0019-3673", "team": "DevOps", "title": "DevOps Specialist", "location": "Austin", "expected_duration": 281.37, "is_sla_met": "Yes"}, {"user_name": "Isabel", "workflow_name": "Security Scan", "timestamp": "2025-12-04 00:40:00", "duration": 114.59, "correlation_id": "corr-0020-3585", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 279.18, "is_sla_met": "Yes"}, {"user_name": "Jack", "workflow_name": "Code Review", "timestamp": "2025-12-08 17:41:00", "duration": 421.86, "correlation_id": "corr-0021-6355", "team": "Platform", "title": "Software Engineer", "location": "Singapore", "expected_duration": 209.52, "is_sla_met": "No"}, {"user_name": "Henry", "workflow_name": "API Testing", "timestamp": "2025-12-03 14:17:00", "duration": 433.32, "correlation_id": "corr-0022-7615", "team": "DevOps", "title": "DevOps Specialist", "location": "Austin", "expected_duration": 265.18, "is_sla_met": "No"}, {"user_name": "Isabel", "workflow_name": "Security Scan", "timestamp": "2025-12-03 08:33:00", "duration": 173.55, "correlation_id": "corr-0023-9241", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 253.76, "is_sla_met": "Yes"}, {"user_name": "Frank", "workflow_name": "Code Review", "timestamp": "2025-12-02 16:18:00", "duration": 271.42, "correlation_id": "corr-0024-9572", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 277.27, "is_sla_met": "Yes"}, {"user_name": "Isabel", "workflow_name": "Security Scan", "timestamp": "2025-12-04 18:49:00", "duration": 88.65, "correlation_id": "corr-0025-7710", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 257.18, "is_sla_met": "Yes"}, {"user_name": "Isabel", "workflow_name": "Deployment", "timestamp": "2025-12-03 12:31:00", "duration": 318.24, "correlation_id": "corr-0026-9013", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 206.57, "is_sla_met": "No"}, {"user_name": "Frank", "workflow_name": "Security Scan", "timestamp": "2025-12-05 11:54:00", "duration": 366.41, "correlation_id": "corr-0027-1040", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 208.63, "is_sla_met": "No"}, {"user_name": "Grace", "workflow_name": "Code Review", "timestamp": "2025-12-04 16:12:00", "duration": 55.18, "correlation_id": "corr-0028-1032", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 288.32, "is_sla_met": "Yes"}, {"user_name": "Henry", "workflow_name": "API Testing", "timestamp": "2025-12-08 23:21:00", "duration": 307.03, "correlation_id": "corr-0029-4131", "team": "DevOps", "title": "DevOps Specialist", "location": "Austin", "expected_duration": 239.77, "is_sla_met": "No"}, {"user_name": "Henry", "workflow_name": "Database Migration", "timestamp": "2025-12-07 02:40:00", "duration": 336.53, "correlation_id": "corr-0030-2791", "team": "DevOps", "title": "DevOps Specialist", "location": "Austin", "expected_duration": 236.45, "is_sla_met": "No"}, {"user_name": "Isabel", "workflow_name": "Security Scan", "timestamp": "2025-12-07 11:00:00", "duration": 303.0, "correlation_id": "corr-0031-3712", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 201.6, "is_sla_met": "No"}, {"user_name": "Grace", "workflow_name": "Security Scan", "timestamp": "2025-12-06 03:26:00", "duration": 319.5, "correlation_id": "corr-0032-6273", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 239.15, "is_sla_met": "No"}, {"user_name": "Jack", "workflow_name": "Database Migration", "timestamp": "2025-12-05 03:25:00", "duration": 396.14, "correlation_id": "corr-0033-1614", "team": "Platform", "title": "Software Engineer", "location": "Singapore", "expected_duration": 285.55, "is_sla_met": "No"}, {"user_name": "Frank", "workflow_name": "Database Migration", "timestamp": "2025-12-08 04:11:00", "duration": 401.27, "correlation_id": "corr-0034-4551", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 213.7, "is_sla_met": "No"}, {"user_name": "Henry", "workflow_name": "API Testing", "timestamp": "2025-12-01 15:35:00", "duration": 98.38, "correlation_id": "corr-0035-3304", "team": "DevOps", "title": "DevOps Specialist", "location": "Austin", "expected_duration": 213.74, "is_sla_met": "Yes"}, {"user_name": "Grace", "workflow_name": "API Testing", "timestamp": "2025-12-04 04:12:00", "duration": 388.37, "correlation_id": "corr-0036-2629", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 258.7, "is_sla_met": "No"}, {"user_name": "Isabel", "workflow_name": "API Testing", "timestamp": "2025-12-05 07:34:00", "duration": 443.07, "correlation_id": "corr-0037-5614", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 283.12, "is_sla_met": "No"}, {"user_name": "Grace", "workflow_name": "Database Migration", "timestamp": "2025-12-02 10:43:00", "duration": 214.24, "correlation_id": "corr-0038-9910", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 279.77, "is_sla_met": "Yes"}, {"user_name": "Isabel", "workflow_name": "Security Scan", "timestamp": "2025-12-03 11:19:00", "duration": 331.8, "correlation_id": "corr-0039-3226", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 209.52, "is_sla_met": "No"}, {"user_name": "Frank", "workflow_name": "Code Review", "timestamp": "2025-12-01 15:56:00", "duration": 373.84, "correlation_id": "corr-0040-7905", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 267.24, "is_sla_met": "No"}, {"user_name": "Isabel", "workflow_name": "Deployment", "timestamp": "2025-12-04 11:42:00", "duration": 28.42, "correlation_id": "corr-0041-7461", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 251.65, "is_sla_met": "Yes"}, {"user_name": "Frank", "workflow_name": "Security Scan", "timestamp": "2025-12-02 11:14:00", "duration": 76.5, "correlation_id": "corr-0042-4085", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 287.09, "is_sla_met": "Yes"}, {"user_name": "Jack", "workflow_name": "API Testing", "timestamp": "2025-12-01 15:30:00", "duration": 218.93, "correlation_id": "corr-0043-1449", "team": "Platform", "title": "Software Engineer", "location": "Singapore", "expected_duration": 274.68, "is_sla_met": "Yes"}, {"user_name": "Grace", "workflow_name": "API Testing", "timestamp": "2025-12-05 01:27:00", "duration": 427.9, "correlation_id": "corr-0044-9280", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 271.01, "is_sla_met": "No"}, {"user_name": "Frank", "workflow_name": "Deployment", "timestamp": "2025-12-04 13:41:00", "duration": 335.76, "correlation_id": "corr-0045-4862", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 209.88, "is_sla_met": "No"}, {"user_name": "Isabel", "workflow_name": "Deployment", "timestamp": "2025-12-06 13:41:00", "duration": 392.68, "correlation_id": "corr-0046-4286", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 275.31, "is_sla_met": "No"}, {"user_name": "Frank", "workflow_name": "Security Scan", "timestamp": "2025-12-07 07:39:00", "duration": 304.2, "correlation_id": "corr-0047-2118", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 226.0, "is_sla_met": "No"}, {"user_name": "Henry", "workflow_name": "Security Scan", "timestamp": "2025-12-05 22:49:00", "duration": 295.91, "correlation_id": "corr-0048-6817", "team": "DevOps", "title": "DevOps Specialist", "location": "Austin", "expected_duration": 292.32, "is_sla_met": "No"}, {"user_name": "Henry", "workflow_name": "Code Review", "timestamp": "2025-12-05 10:00:00", "duration": 430.47, "correlation_id": "corr-0049-7718", "team": "DevOps", "title": "DevOps Specialist", "location": "Austin", "expected_duration": 231.28, "is_sla_met": "No"}, {"user_name": "Isabel", "workflow_name": "Code Review", "timestamp": "2025-12-07 15:04:00", "duration": 34.36, "correlation_id": "corr-0050-3055", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 274.18, "is_sla_met": "Yes"}, {"user_name": "Frank", "workflow_name": "Code Review", "timestamp": "2025-12-03 11:53:00", "duration": 76.17, "correlation_id": "corr-0051-3467", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 281.94, "is_sla_met": "Yes"}, {"user_name": "Jack", "workflow_name": "API Testing", "timestamp": "2025-12-08 22:40:00", "duration": 211.21, "correlation_id": "corr-0052-3190", "team": "Platform", "title": "Software Engineer", "location": "Singapore", "expected_duration": 277.06, "is_sla_met": "Yes"}, {"user_name": "Grace", "workflow_name": "API Testing", "timestamp": "2025-12-07 15:20:00", "duration": 96.29, "correlation_id": "corr-0053-9967", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 248.29, "is_sla_met": "Yes"}, {"user_name": "Frank", "workflow_name": "API Testing", "timestamp": "2025-12-01 18:13:00", "duration": 186.6, "correlation_id": "corr-0054-8674", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 244.74, "is_sla_met": "Yes"}, {"user_name": "Frank", "workflow_name": "API Testing", "timestamp": "2025-12-08 21:45:00", "duration": 73.69, "correlation_id": "corr-0055-5596", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 246.17, "is_sla_met": "Yes"}, {"user_name": "Henry", "workflow_name": "API Testing", "timestamp": "2025-12-08 01:36:00", "duration": 44.86, "correlation_id": "corr-0056-9276", "team": "DevOps", "title": "DevOps Specialist", "location": "Austin", "expected_duration": 242.52, "is_sla_met": "Yes"}, {"user_name": "Jack", "workflow_name": "Deployment", "timestamp": "2025-12-04 07:58:00", "duration": 201.35, "correlation_id": "corr-0057-3524", "team": "Platform", "title": "Software Engineer", "location": "Singapore", "expected_duration": 264.33, "is_sla_met": "Yes"}, {"user_name": "Grace", "workflow_name": "API Testing", "timestamp": "2025-12-04 05:45:00", "duration": 162.95, "correlation_id": "corr-0058-5127", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 299.31, "is_sla_met": "Yes"}, {"user_name": "Frank", "workflow_name": "Deployment", "timestamp": "2025-12-01 01:24:00", "duration": 216.93, "correlation_id": "corr-0059-4431", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 238.0, "is_sla_met": "Yes"}, {"user_name": "Grace", "workflow_name": "Database Migration", "timestamp": "2025-12-06 05:57:00", "duration": 319.93, "correlation_id": "corr-0060-1962", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 243.37, "is_sla_met": "No"}, {"user_name": "Grace", "workflow_name": "Deployment", "timestamp": "2025-12-08 12:18:00", "duration": 19.06, "correlation_id": "corr-0061-9413", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 293.91, "is_sla_met": "Yes"}, {"user_name": "Frank", "workflow_name": "Database Migration", "timestamp": "2025-12-04 18:56:00", "duration": 294.74, "correlation_id": "corr-0062-9844", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 256.95, "is_sla_met": "No"}, {"user_name": "Isabel", "workflow_name": "Code Review", "timestamp": "2025-12-01 03:42:00", "duration": 111.87, "correlation_id": "corr-0063-4339", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 204.43, "is_sla_met": "Yes"}, {"user_name": "Isabel", "workflow_name": "Deployment", "timestamp": "2025-12-07 18:04:00", "duration": 270.12, "correlation_id": "corr-0064-7695", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 211.48, "is_sla_met": "No"}, {"user_name": "Jack", "workflow_name": "Database Migration", "timestamp": "2025-12-01 20:14:00", "duration": 52.89, "correlation_id": "corr-0065-9218", "team": "Platform", "title": "Software Engineer", "location": "Singapore", "expected_duration": 242.83, "is_sla_met": "Yes"}, {"user_name": "Isabel", "workflow_name": "API Testing", "timestamp": "2025-12-05 12:22:00", "duration": 116.62, "correlation_id": "corr-0066-1640", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 284.11, "is_sla_met": "Yes"}, {"user_name": "Grace", "workflow_name": "Database Migration", "timestamp": "2025-12-03 02:34:00", "duration": 366.51, "correlation_id": "corr-0067-8700", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 251.21, "is_sla_met": "No"}, {"user_name": "Jack", "workflow_name": "Database Migration", "timestamp": "2025-12-03 18:27:00", "duration": 418.32, "correlation_id": "corr-0068-4740", "team": "Platform", "title": "Software Engineer", "location": "Singapore", "expected_duration": 207.63, "is_sla_met": "No"}, {"user_name": "Grace", "workflow_name": "Deployment", "timestamp": "2025-12-01 21:53:00", "duration": 388.03, "correlation_id": "corr-0069-2221", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 239.62, "is_sla_met": "No"}, {"user_name": "Isabel", "workflow_name": "Database Migration", "timestamp": "2025-12-01 16:50:00", "duration": 176.95, "correlation_id": "corr-0070-1186", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 264.17, "is_sla_met": "Yes"}, {"user_name": "Jack", "workflow_name": "API Testing", "timestamp": "2025-12-04 07:08:00", "duration": 152.1, "correlation_id": "corr-0071-4479", "team": "Platform", "title": "Software Engineer", "location": "Singapore", "expected_duration": 208.9, "is_sla_met": "Yes"}, {"user_name": "Grace", "workflow_name": "API Testing", "timestamp": "2025-12-04 11:17:00", "duration": 229.44, "correlation_id": "corr-0072-2700", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 239.26, "is_sla_met": "Yes"}, {"user_name": "Isabel", "workflow_name": "API Testing", "timestamp": "2025-12-07 15:16:00", "duration": 48.27, "correlation_id": "corr-0073-8118", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 212.2, "is_sla_met": "Yes"}, {"user_name": "Grace", "workflow_name": "Deployment", "timestamp": "2025-12-08 11:21:00", "duration": 176.96, "correlation_id": "corr-0074-3689", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 267.0, "is_sla_met": "Yes"}, {"user_name": "Jack", "workflow_name": "Code Review", "timestamp": "2025-12-04 10:02:00", "duration": 121.79, "correlation_id": "corr-0075-6270", "team": "Platform", "title": "Software Engineer", "location": "Singapore", "expected_duration": 278.49, "is_sla_met": "Yes"}, {"user_name": "Jack", "workflow_name": "API Testing", "timestamp": "2025-12-08 03:14:00", "duration": 224.75, "correlation_id": "corr-0076-4820", "team": "Platform", "title": "Software Engineer", "location": "Singapore", "expected_duration": 255.25, "is_sla_met": "Yes"}, {"user_name": "Frank", "workflow_name": "Security Scan", "timestamp": "2025-12-01 00:14:00", "duration": 108.64, "correlation_id": "corr-0077-6564", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 204.19, "is_sla_met": "Yes"}, {"user_name": "Grace", "workflow_name": "Code Review", "timestamp": "2025-12-05 00:07:00", "duration": 28.21, "correlation_id": "corr-0078-4604", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 273.34, "is_sla_met": "Yes"}, {"user_name": "Henry", "workflow_name": "API Testing", "timestamp": "2025-12-06 04:41:00", "duration": 64.35, "correlation_id": "corr-0079-1217", "team": "DevOps", "title": "DevOps Specialist", "location": "Austin", "expected_duration": 282.94, "is_sla_met": "Yes"}, {"user_name": "Jack", "workflow_name": "Security Scan", "timestamp": "2025-12-06 06:14:00", "duration": 59.3, "correlation_id": "corr-0080-9267", "team": "Platform", "title": "Software Engineer", "location": "Singapore", "expected_duration": 248.76, "is_sla_met": "Yes"}, {"user_name": "Grace", "workflow_name": "Code Review", "timestamp": "2025-12-06 23:45:00", "duration": 285.03, "correlation_id": "corr-0081-3305", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 244.1, "is_sla_met": "No"}, {"user_name": "Henry", "workflow_name": "Code Review", "timestamp": "2025-12-02 14:53:00", "duration": 178.69, "correlation_id": "corr-0082-1421", "team": "DevOps", "title": "DevOps Specialist", "location": "Austin", "expected_duration": 258.58, "is_sla_met": "Yes"}, {"user_name": "Grace", "workflow_name": "Database Migration", "timestamp": "2025-12-03 00:01:00", "duration": 313.74, "correlation_id": "corr-0083-3450", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 230.94, "is_sla_met": "No"}, {"user_name": "Henry", "workflow_name": "Security Scan", "timestamp": "2025-12-08 23:49:00", "duration": 422.41, "correlation_id": "corr-0084-6327", "team": "DevOps", "title": "DevOps Specialist", "location": "Austin", "expected_duration": 274.43, "is_sla_met": "No"}, {"user_name": "Isabel", "workflow_name": "Code Review", "timestamp": "2025-12-03 19:12:00", "duration": 63.3, "correlation_id": "corr-0085-8514", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 238.78, "is_sla_met": "Yes"}, {"user_name": "Isabel", "workflow_name": "Code Review", "timestamp": "2025-12-03 23:26:00", "duration": 188.52, "correlation_id": "corr-0086-6326", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 286.51, "is_sla_met": "Yes"}, {"user_name": "Isabel", "workflow_name": "Code Review", "timestamp": "2025-12-03 23:36:00", "duration": 144.54, "correlation_id": "corr-0087-8219", "team": "QA", "title": "QA Lead", "location": "Remote", "expected_duration": 243.36, "is_sla_met": "Yes"}, {"user_name": "Jack", "workflow_name": "Code Review", "timestamp": "2025-12-07 21:10:00", "duration": 62.66, "correlation_id": "corr-0088-3028", "team": "Platform", "title": "Software Engineer", "location": "Singapore", "expected_duration": 228.3, "is_sla_met": "Yes"}, {"user_name": "Henry", "workflow_name": "Security Scan", "timestamp": "2025-12-06 10:42:00", "duration": 254.29, "correlation_id": "corr-0089-2711", "team": "DevOps", "title": "DevOps Specialist", "location": "Austin", "expected_duration": 237.04, "is_sla_met": "No"}, {"user_name": "Grace", "workflow_name": "Deployment", "timestamp": "2025-12-01 17:20:00", "duration": 371.48, "correlation_id": "corr-0090-8226", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 251.1, "is_sla_met": "No"}, {"user_name": "Grace", "workflow_name": "Code Review", "timestamp": "2025-12-08 23:55:00", "duration": 170.78, "correlation_id": "corr-0091-5880", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 256.8, "is_sla_met": "Yes"}, {"user_name": "Grace", "workflow_name": "Code Review", "timestamp": "2025-12-07 22:11:00", "duration": 40.78, "correlation_id": "corr-0092-1391", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 227.52, "is_sla_met": "Yes"}, {"user_name": "Grace", "workflow_name": "API Testing", "timestamp": "2025-12-06 00:39:00", "duration": 362.52, "correlation_id": "corr-0093-9139", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 210.64, "is_sla_met": "No"}, {"user_name": "Jack", "workflow_name": "Code Review", "timestamp": "2025-12-08 17:32:00", "duration": 346.29, "correlation_id": "corr-0094-5046", "team": "Platform", "title": "Software Engineer", "location": "Singapore", "expected_duration": 261.23, "is_sla_met": "No"}, {"user_name": "Grace", "workflow_name": "Database Migration", "timestamp": "2025-12-06 05:12:00", "duration": 199.72, "correlation_id": "corr-0095-5850", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 291.52, "is_sla_met": "Yes"}, {"user_name": "Frank", "workflow_name": "Code Review", "timestamp": "2025-12-02 05:30:00", "duration": 197.76, "correlation_id": "corr-0096-7351", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 255.49, "is_sla_met": "Yes"}, {"user_name": "Frank", "workflow_name": "Security Scan", "timestamp": "2025-12-01 08:35:00", "duration": 445.8, "correlation_id": "corr-0097-6297", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 241.84, "is_sla_met": "No"}, {"user_name": "Grace", "workflow_name": "Database Migration", "timestamp": "2025-12-03 09:31:00", "duration": 28.76, "correlation_id": "corr-0098-4951", "team": "Security", "title": "Security Engineer", "location": "Berlin", "expected_duration": 254.95, "is_sla_met": "Yes"}, {"user_name": "Jack", "workflow_name": "Security Scan", "timestamp": "2025-12-07 15:57:00", "duration": 181.44, "correlation_id": "corr-0099-6055", "team": "Platform", "title": "Software Engineer", "location": "Singapore", "expected_duration": 200.39, "is_sla_met": "Yes"}, {"user_name": "Frank", "workflow_name": "Deployment", "timestamp": "2025-12-01 10:06:00", "duration": 357.68, "correlation_id": "corr-0100-6674", "team": "Platform", "title": "Platform Engineer", "location": "Seattle", "expected_duration": 213.32, "is_sla_met": "No"}]};
+        const DATASET_METADATA = {"workflow_data.csv": {"columns": ["user_name", "workflow_name", "timestamp", "duration", "correlation_id", "team", "title", "location", "expected_duration", "is_sla_met"]}, "workflow_data2.csv": {"columns": ["user_name", "workflow_name", "timestamp", "duration", "correlation_id", "team", "title", "location", "expected_duration", "is_sla_met"]}};
 
         const COLOR_PALETTE = [
             '#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00',
@@ -252,8 +385,12 @@
         ];
 
         let allData = [];
-        let datasetAxisRanges = {};  // Store axis ranges per dataset
-        let datasetMetadata = {};  // Store filter values per dataset
+        let datasetAxisRanges = {};
+        let datasetFilterMetadata = {};
+        let selectedPoints = new Set();
+        let currentDatasetConfig = null;
+        let colorGroupBy = null;  // Track which attribute determines color
+        let colorMap = {};  // Map values to colors
 
         // Toggle filter section collapse/expand
         function toggleSection(header) {
@@ -262,49 +399,142 @@
             content.classList.toggle('collapsed');
         }
 
-        // Update filter options based on selected dataset
-        function updateFiltersForDataset(datasetName) {
-            const metadata = datasetMetadata[datasetName];
-            if (!metadata) return;
-
-            // Update user filters
-            const userContainer = document.getElementById('user-filters');
-            userContainer.innerHTML = '';
-            metadata.users.forEach(user => {
-                userContainer.appendChild(createCheckbox(user, 'user', true));
-            });
-
-            // Update team filters
-            const teamContainer = document.getElementById('team-filters');
-            teamContainer.innerHTML = '';
-            metadata.teams.forEach(team => {
-                teamContainer.appendChild(createCheckbox(team, 'team', true));
-            });
-
-            // Update title filters
-            const titleContainer = document.getElementById('title-filters');
-            titleContainer.innerHTML = '';
-            metadata.titles.forEach(title => {
-                titleContainer.appendChild(createCheckbox(title, 'title', true));
-            });
-
-            // Update location filters
-            const locationContainer = document.getElementById('location-filters');
-            locationContainer.innerHTML = '';
-            metadata.locations.forEach(location => {
-                locationContainer.appendChild(createCheckbox(location, 'location', true));
-            });
+        // Toggle panel (histogram or filters) collapse/expand
+        function togglePanel(panelId) {
+            const panel = document.getElementById(panelId);
+            panel.classList.toggle('collapsed');
         }
 
-        // Initialize filter checkboxes
-        function initializeFilters() {
-            // Dataset dropdown with change handler
-            const datasetSelect = document.getElementById('dataset-select');
-            CSV_FILES.forEach(file => {
+        // Calculate percentiles from array of durations
+        function calculatePercentiles(durations, percentiles) {
+            const sorted = [...durations].sort((a, b) => a - b);
+            const results = {};
+            percentiles.forEach(p => {
+                const index = Math.ceil((p / 100) * sorted.length) - 1;
+                results[p] = sorted[Math.max(0, index)];
+            });
+            return results;
+        }
+
+        // Update histogram with current filtered data
+        function updateHistogram(filteredData) {
+            if (!currentDatasetConfig || filteredData.length === 0) {
+                document.getElementById('histogram').innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">No data to display</p>';
+                document.getElementById('percentile-info').innerHTML = '';
+                return;
+            }
+
+            const yColumn = currentDatasetConfig.y_axis.column;
+            const durations = filteredData.map(d => parseFloat(d[yColumn]));
+            const percentiles = calculatePercentiles(durations, [50, 75, 95, 97]);
+
+            // Create histogram trace
+            const trace = {
+                x: durations,
+                type: 'histogram',
+                marker: {
+                    color: '#377eb8',
+                    line: {
+                        color: 'white',
+                        width: 1
+                    }
+                },
+                nbinsx: 30
+            };
+
+            // Create shapes for percentile lines
+            const shapes = [
+                { type: 'line', x0: percentiles[50], x1: percentiles[50], y0: 0, y1: 1, yref: 'paper',
+                   line: { color: '#4daf4a', width: 2, dash: 'solid' } },
+                { type: 'line', x0: percentiles[75], x1: percentiles[75], y0: 0, y1: 1, yref: 'paper',
+                   line: { color: '#ff7f00', width: 2, dash: 'dash' } },
+                { type: 'line', x0: percentiles[95], x1: percentiles[95], y0: 0, y1: 1, yref: 'paper',
+                   line: { color: '#e41a1c', width: 2, dash: 'dash' } },
+                { type: 'line', x0: percentiles[97], x1: percentiles[97], y0: 0, y1: 1, yref: 'paper',
+                   line: { color: '#984ea3', width: 2, dash: 'dot' } }
+            ];
+
+            const layout = {
+                xaxis: { title: currentDatasetConfig.y_axis.label },
+                yaxis: { title: 'Count' },
+                margin: { t: 20, b: 40, l: 40, r: 20 },
+                height: 500,
+                showlegend: false,
+                shapes: shapes
+            };
+
+            const config = {
+                displayModeBar: false
+            };
+
+            Plotly.newPlot('histogram', [trace], layout, config);
+
+            // Update percentile info
+            document.getElementById('percentile-info').innerHTML = `
+                <div><strong>Percentiles:</strong></div>
+                <div>🟢 50th: ${percentiles[50].toFixed(2)}</div>
+                <div>🟠 75th: ${percentiles[75].toFixed(2)}</div>
+                <div>🔴 95th: ${percentiles[95].toFixed(2)}</div>
+                <div>🟣 97th: ${percentiles[97].toFixed(2)}</div>
+            `;
+        }
+
+        // Update filter options based on selected dataset
+        function updateFiltersForDataset(datasetName) {
+            const datasetCfg = CHART_CONFIG.datasets.find(d => d.name === datasetName);
+            if (!datasetCfg) return;
+
+            currentDatasetConfig = datasetCfg;
+            const metadata = datasetFilterMetadata[datasetName];
+            if (!metadata) return;
+
+            // Clear existing dynamic filters
+            const dynamicFiltersContainer = document.getElementById('dynamic-filters');
+            dynamicFiltersContainer.innerHTML = '';
+
+            // Populate Color By dropdown
+            const colorBySelect = document.getElementById('color-by-select');
+            colorBySelect.innerHTML = '';
+            datasetCfg.filters.forEach((filterCfg, index) => {
                 const option = document.createElement('option');
-                option.value = file;
-                option.textContent = file;
-                datasetSelect.appendChild(option);
+                option.value = filterCfg.column;
+                option.textContent = filterCfg.label;
+                colorBySelect.appendChild(option);
+            });
+            // Set default to first filter column
+            colorGroupBy = datasetCfg.filters[0]?.column;
+            colorBySelect.value = colorGroupBy;
+
+            // Create filter sections based on configuration
+            datasetCfg.filters.forEach((filterCfg, index) => {
+                const column = filterCfg.column;
+                const label = filterCfg.label;
+                const icon = filterCfg.icon || '🔹';
+                const values = metadata[column] || [];
+
+                // Determine if this section should be expanded (first two) or collapsed
+                const isCollapsed = index >= 2;
+                const collapsedClass = isCollapsed ? 'collapsed' : '';
+
+                const filterSection = `
+                    <div class="filter-section">
+                        <h3 onclick="toggleSection(this)" class="${collapsedClass}">${icon} ${label}</h3>
+                        <div class="filter-content ${collapsedClass}">
+                            <div class="filter-options" id="filter-${column}"></div>
+                            <div class="filter-actions">
+                                <button class="btn" onclick="selectAll('${column}')">All</button>
+                                <button class="btn" onclick="clearAll('${column}')">None</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                dynamicFiltersContainer.innerHTML += filterSection;
+
+                // Populate filter options
+                const container = document.getElementById(`filter-${column}`);
+                values.forEach(value => {
+                    container.appendChild(createCheckbox(value, column, true));
+                });
             });
         }
 
@@ -341,89 +571,63 @@
         }
 
         // Filter selection functions
-        function selectAllUsers() {
-            document.querySelectorAll('[data-type="user"]').forEach(cb => cb.checked = true);
+        function selectAll(column) {
+            document.querySelectorAll(`[data-type="${column}"]:not(:checked)`).forEach(cb => cb.checked = true);
             applyFilters();
         }
-        function clearAllUsers() {
-            document.querySelectorAll('[data-type="user"]').forEach(cb => cb.checked = false);
-            applyFilters();
-        }
-        function selectAllTeams() {
-            document.querySelectorAll('[data-type="team"]').forEach(cb => cb.checked = true);
-            applyFilters();
-        }
-        function clearAllTeams() {
-            document.querySelectorAll('[data-type="team"]').forEach(cb => cb.checked = false);
-            applyFilters();
-        }
-        function selectAllTitles() {
-            document.querySelectorAll('[data-type="title"]').forEach(cb => cb.checked = true);
-            applyFilters();
-        }
-        function clearAllTitles() {
-            document.querySelectorAll('[data-type="title"]').forEach(cb => cb.checked = false);
-            applyFilters();
-        }
-        function selectAllLocations() {
-            document.querySelectorAll('[data-type="location"]').forEach(cb => cb.checked = true);
-            applyFilters();
-        }
-        function clearAllLocations() {
-            document.querySelectorAll('[data-type="location"]').forEach(cb => cb.checked = false);
+        function clearAll(column) {
+            document.querySelectorAll(`[data-type="${column}"]:checked`).forEach(cb => cb.checked = false);
             applyFilters();
         }
 
-        // Load CSV files
-        async function loadCSVFiles() {
-            const promises = CSV_FILES.map(file =>
-                new Promise((resolve, reject) => {
-                    Papa.parse(file, {
-                        download: true,
-                        header: true,
-                        dynamicTyping: false,
-                        complete: (results) => {
-                            results.data.forEach(row => {
-                                row._dataset = file;
-                            });
-                            resolve(results.data);
-                        },
-                        error: reject
+        // Load embedded data
+        function loadEmbeddedData() {
+            allData = [];
+
+            CHART_CONFIG.datasets.forEach(datasetCfg => {
+                const datasetName = datasetCfg.name;
+                const datasetData = EMBEDDED_DATA[datasetName];
+
+                if (datasetData) {
+                    datasetData.forEach(row => {
+                        row._dataset = datasetName;
+                        allData.push(row);
                     });
-                })
-            );
+                }
+            });
 
-            const results = await Promise.all(promises);
-            allData = results.flat().filter(row => row.timestamp); // Filter out empty rows
-
-            // Calculate axis ranges and metadata per dataset
-            CSV_FILES.forEach(csvFile => {
-                const datasetData = allData.filter(row => row._dataset === csvFile);
+            // Calculate axis ranges and filter metadata per dataset
+            CHART_CONFIG.datasets.forEach(datasetCfg => {
+                const datasetName = datasetCfg.name;
+                const datasetData = allData.filter(row => row._dataset === datasetName);
 
                 if (datasetData.length > 0) {
-                    const timestamps = datasetData.map(d => new Date(d.timestamp));
-                    const durations = datasetData.map(d => parseFloat(d.duration));
+                    const xColumn = datasetCfg.x_axis.column;
+                    const yColumn = datasetCfg.y_axis.column;
 
-                    const minTime = new Date(Math.min(...timestamps));
-                    const maxTime = new Date(Math.max(...timestamps));
-                    const minDuration = Math.min(...durations);
-                    const maxDuration = Math.max(...durations);
+                    const xValues = datasetData.map(d => new Date(d[xColumn]));
+                    const yValues = datasetData.map(d => parseFloat(d[yColumn]));
 
-                    const timePadding = (maxTime - minTime) * 0.05;
-                    const durationPadding = (maxDuration - minDuration) * 0.05;
+                    const minX = new Date(Math.min(...xValues));
+                    const maxX = new Date(Math.max(...xValues));
+                    const minY = Math.min(...yValues);
+                    const maxY = Math.max(...yValues);
 
-                    datasetAxisRanges[csvFile] = {
-                        xaxis: [new Date(minTime.getTime() - timePadding), new Date(maxTime.getTime() + timePadding)],
-                        yaxis: [minDuration - durationPadding, maxDuration + durationPadding]
+                    const xPadding = (maxX - minX) * 0.05;
+                    const yPadding = (maxY - minY) * 0.05;
+
+                    datasetAxisRanges[datasetName] = {
+                        xaxis: [new Date(minX.getTime() - xPadding), new Date(maxX.getTime() + xPadding)],
+                        yaxis: [minY - yPadding, maxY + yPadding]
                     };
 
-                    // Build metadata (unique filter values) for this dataset
-                    datasetMetadata[csvFile] = {
-                        users: [...new Set(datasetData.map(d => d.user_name))].sort(),
-                        teams: [...new Set(datasetData.map(d => d.team))].sort(),
-                        titles: [...new Set(datasetData.map(d => d.title))].sort(),
-                        locations: [...new Set(datasetData.map(d => d.location))].sort()
-                    };
+                    // Build filter metadata
+                    const filterMetadata = {};
+                    datasetCfg.filters.forEach(filterCfg => {
+                        const column = filterCfg.column;
+                        filterMetadata[column] = [...new Set(datasetData.map(d => d[column]))].sort();
+                    });
+                    datasetFilterMetadata[datasetName] = filterMetadata;
                 }
             });
 
@@ -433,72 +637,90 @@
         // Get selected filter values
         function getSelectedFilters() {
             const datasetSelect = document.getElementById('dataset-select');
-            return {
-                dataset: datasetSelect.value,
-                users: Array.from(document.querySelectorAll('[data-type="user"]:checked'))
-                    .map(cb => cb.dataset.value),
-                teams: Array.from(document.querySelectorAll('[data-type="team"]:checked'))
-                    .map(cb => cb.dataset.value),
-                titles: Array.from(document.querySelectorAll('[data-type="title"]:checked'))
-                    .map(cb => cb.dataset.value),
-                locations: Array.from(document.querySelectorAll('[data-type="location"]:checked'))
-                    .map(cb => cb.dataset.value)
+            const datasetName = datasetSelect.value;
+            const datasetCfg = CHART_CONFIG.datasets.find(d => d.name === datasetName);
+
+            const filters = {
+                dataset: datasetName
             };
+
+            if (datasetCfg) {
+                datasetCfg.filters.forEach(filterCfg => {
+                    const column = filterCfg.column;
+                    filters[column] = Array.from(document.querySelectorAll(`[data-type="${column}"]:checked`))
+                        .map(cb => cb.dataset.value);
+                });
+            }
+
+            return filters;
         }
 
         // Apply filters and update plot
         function applyFilters() {
             const filters = getSelectedFilters();
+            const datasetCfg = CHART_CONFIG.datasets.find(d => d.name === filters.dataset);
+            if (!datasetCfg) return;
 
             // Filter data
-            const filteredData = allData.filter(row => {
-                return row._dataset === filters.dataset &&
-                       filters.users.includes(row.user_name) &&
-                       filters.teams.includes(row.team) &&
-                       filters.titles.includes(row.title) &&
-                       filters.locations.includes(row.location);
+            let filteredData = allData.filter(row => row._dataset === filters.dataset);
+
+            // Apply each configured filter
+            datasetCfg.filters.forEach(filterCfg => {
+                const column = filterCfg.column;
+                if (filters[column]) {
+                    filteredData = filteredData.filter(row => filters[column].includes(row[column]));
+                }
             });
 
-            // Group by user
-            const dataByUser = {};
+            // Use colorGroupBy for grouping and coloring
+            const groupColumn = colorGroupBy || datasetCfg.filters[0]?.column || 'user_name';
+
+            // Group by the selected color attribute
+            const dataByGroup = {};
             filteredData.forEach(row => {
-                if (!dataByUser[row.user_name]) {
-                    dataByUser[row.user_name] = [];
+                const groupValue = row[groupColumn];
+                if (!dataByGroup[groupValue]) {
+                    dataByGroup[groupValue] = [];
                 }
-                dataByUser[row.user_name].push(row);
+                dataByGroup[groupValue].push(row);
+            });
+
+            // Get unique values for coloring
+            const uniqueGroups = [...new Set(filteredData.map(r => r[groupColumn]))].sort();
+
+            // Build color map for consistent coloring
+            colorMap = {};
+            uniqueGroups.forEach((value, idx) => {
+                colorMap[value] = COLOR_PALETTE[idx % COLOR_PALETTE.length];
             });
 
             // Create traces
+            const xColumn = datasetCfg.x_axis.column;
+            const yColumn = datasetCfg.y_axis.column;
             const traces = [];
-            USERS.forEach((user, idx) => {
-                if (dataByUser[user]) {
-                    const userData = dataByUser[user];
+
+            uniqueGroups.forEach((groupValue, idx) => {
+                if (dataByGroup[groupValue]) {
+                    const groupData = dataByGroup[groupValue];
+
+                    // Get all column names for customdata
+                    const columns = DATASET_METADATA[filters.dataset].columns;
+
                     traces.push({
-                        x: userData.map(d => d.timestamp),
-                        y: userData.map(d => parseFloat(d.duration)),
+                        x: groupData.map(d => d[xColumn]),
+                        y: groupData.map(d => parseFloat(d[yColumn])),
                         mode: 'markers',
                         type: 'scatter',
-                        name: user,
+                        name: groupValue,
                         marker: {
                             size: 10,
                             color: COLOR_PALETTE[idx % COLOR_PALETTE.length],
                             line: { width: 1, color: 'white' },
                             opacity: 0.8
                         },
-                        customdata: userData.map(d => [
-                            d.user_name, d.workflow_name, d.correlation_id,
-                            d.team, d.title, d.location
-                        ]),
-                        hovertemplate:
-                            '<b>%{customdata[1]}</b><br>' +
-                            'User: %{customdata[0]}<br>' +
-                            'Team: %{customdata[3]}<br>' +
-                            'Title: %{customdata[4]}<br>' +
-                            'Location: %{customdata[5]}<br>' +
-                            'Time: %{x}<br>' +
-                            'Duration: %{y:.2f}s<br>' +
-                            'Correlation ID: %{customdata[2]}<br>' +
-                            '<extra></extra>'
+                        customdata: groupData.map(d => columns.map(col => d[col])),
+                        hovertemplate: buildHoverTemplate(columns, xColumn, yColumn),
+                        text: groupData.map((d, i) => i) // Store index for selection
                     });
                 }
             });
@@ -508,11 +730,11 @@
 
             const layout = {
                 xaxis: {
-                    title: 'Execution Time',
+                    title: datasetCfg.x_axis.label,
                     range: axisRanges.xaxis
                 },
                 yaxis: {
-                    title: 'Duration (seconds)',
+                    title: datasetCfg.y_axis.label,
                     range: axisRanges.yaxis
                 },
                 hovermode: 'closest',
@@ -535,27 +757,152 @@
             };
 
             Plotly.newPlot('plot', traces, layout, config);
+
+            // Add click handler for point selection
+            document.getElementById('plot').on('plotly_click', function(data) {
+                const point = data.points[0];
+                const pointData = {};
+                const columns = DATASET_METADATA[filters.dataset].columns;
+                columns.forEach((col, idx) => {
+                    pointData[col] = point.customdata[idx];
+                });
+
+                // Create unique ID for this point
+                const pointId = JSON.stringify(pointData);
+
+                if (selectedPoints.has(pointId)) {
+                    selectedPoints.delete(pointId);
+                } else {
+                    selectedPoints.add(pointId);
+                }
+
+                updateDataTable();
+            });
+
+            // Update histogram with filtered data
+            updateHistogram(filteredData);
+        }
+
+        function buildHoverTemplate(columns, xColumn, yColumn) {
+            let template = '<b>%{x}</b><br>';
+            columns.forEach((col, idx) => {
+                if (col !== xColumn) {
+                    template += `${col}: %{customdata[${idx}]}<br>`;
+                }
+            });
+            template += '<extra></extra>';
+            return template;
+        }
+
+        // Update data table with selected points
+        function updateDataTable() {
+            const container = document.getElementById('data-table-container');
+            const countSpan = document.getElementById('selected-count');
+            const exportBtn = document.getElementById('export-btn');
+
+            countSpan.textContent = selectedPoints.size;
+            exportBtn.disabled = selectedPoints.size === 0;
+
+            if (selectedPoints.size === 0) {
+                container.innerHTML = '<div class="empty-message">Click on data points in the chart to select them</div>';
+                return;
+            }
+
+            // Convert selected points to array
+            const selectedData = Array.from(selectedPoints).map(pointId => JSON.parse(pointId));
+
+            // Get columns from first point
+            const columns = Object.keys(selectedData[0]).filter(c => c !== '_dataset');
+
+            // Build table
+            let tableHTML = '<table class="data-table"><thead><tr>';
+            columns.forEach(col => {
+                tableHTML += `<th>${col}</th>`;
+            });
+            tableHTML += '</tr></thead><tbody>';
+
+            selectedData.forEach(point => {
+                tableHTML += '<tr>';
+                columns.forEach(col => {
+                    tableHTML += `<td>${point[col] || ''}</td>`;
+                });
+                tableHTML += '</tr>';
+            });
+
+            tableHTML += '</tbody></table>';
+            container.innerHTML = tableHTML;
+        }
+
+        // Export selected points to CSV
+        function exportToCSV() {
+            if (selectedPoints.size === 0) return;
+
+            const selectedData = Array.from(selectedPoints).map(pointId => JSON.parse(pointId));
+            const columns = Object.keys(selectedData[0]).filter(c => c !== '_dataset');
+
+            // Build CSV
+            let csv = columns.join(',') + '\n';
+            selectedData.forEach(point => {
+                const row = columns.map(col => {
+                    const value = point[col] || '';
+                    // Escape commas and quotes
+                    if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+                        return '"' + value.replace(/"/g, '""') + '"';
+                    }
+                    return value;
+                });
+                csv += row.join(',') + '\n';
+            });
+
+            // Download
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'selected_data.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize dataset dropdown
+        function initializeFilters() {
+            const datasetSelect = document.getElementById('dataset-select');
+            CHART_CONFIG.datasets.forEach(datasetCfg => {
+                const option = document.createElement('option');
+                option.value = datasetCfg.name;
+                option.textContent = datasetCfg.label || datasetCfg.name;
+                datasetSelect.appendChild(option);
+            });
+        }
+
+        // Handle dataset change
+        function onDatasetChange() {
+            const datasetSelect = document.getElementById('dataset-select');
+            selectedPoints.clear(); // Clear selections when changing dataset
+            updateFiltersForDataset(datasetSelect.value);
+            applyFilters();
+        }
+
+        // Handle color by change
+        function onColorByChange() {
+            const colorBySelect = document.getElementById('color-by-select');
+            colorGroupBy = colorBySelect.value;
+            applyFilters();
         }
 
         // Initialize on page load
         initializeFilters();
-        loadCSVFiles().then(() => {
-            // Update filters for first dataset after data is loaded
-            if (CSV_FILES.length > 0) {
-                const datasetSelect = document.getElementById('dataset-select');
-                updateFiltersForDataset(datasetSelect.value || CSV_FILES[0]);
-            }
-            applyFilters();
-            console.log('Dashboard loaded successfully');
-        }).catch(error => {
-            console.error('Error loading CSV files:', error);
-            document.getElementById('plot').innerHTML =
-                '<div style="padding: 40px; text-align: center; color: #d32f2f;">' +
-                '<h2>Error Loading Data</h2>' +
-                '<p>Could not load CSV files. Please ensure they are in the same directory as this HTML file.</p>' +
-                '<p style="font-family: monospace; font-size: 12px;">' + error + '</p>' +
-                '</div>';
-        });
+        loadEmbeddedData();
+
+        // Update filters for first dataset after data is loaded
+        if (CHART_CONFIG.datasets.length > 0) {
+            const datasetSelect = document.getElementById('dataset-select');
+            updateFiltersForDataset(datasetSelect.value || CHART_CONFIG.datasets[0].name);
+        }
+        applyFilters();
+        console.log('Dashboard loaded successfully');
     </script>
 </body>
 </html>
