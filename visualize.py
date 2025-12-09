@@ -150,6 +150,7 @@ html_content = f'''<!DOCTYPE html>
             height: fit-content;
             position: sticky;
             top: 20px;
+            transition: opacity 0.3s ease, transform 0.3s ease;
         }}
         .filters-container {{
             width: 280px;
@@ -160,6 +161,7 @@ html_content = f'''<!DOCTYPE html>
             height: fit-content;
             position: sticky;
             top: 20px;
+            transition: opacity 0.3s ease, transform 0.3s ease;
         }}
         .panel-title {{
             font-size: 16px;
@@ -492,6 +494,19 @@ html_content = f'''<!DOCTYPE html>
             }} else {{
                 panel.classList.add('hidden-panel');
             }}
+
+            // Resize plot to take advantage of new space
+            setTimeout(() => {{
+                const plotDiv = document.getElementById('plot');
+                if (plotDiv && plotDiv.data) {{
+                    Plotly.Relayout('plot', {{
+                        autosize: true
+                    }}).then(() => {{
+                        // Force a full redraw
+                        window.dispatchEvent(new Event('resize'));
+                    }});
+                }}
+            }}, 350); // Wait for CSS transition
         }}
 
         // Close settings panel when clicking outside
@@ -766,7 +781,8 @@ html_content = f'''<!DOCTYPE html>
             // Apply each configured filter
             datasetCfg.filters.forEach(filterCfg => {{
                 const column = filterCfg.column;
-                if (filters[column]) {{
+                // Only filter if there are selected values (empty array means show all)
+                if (filters[column] && filters[column].length > 0) {{
                     filteredData = filteredData.filter(row => filters[column].includes(row[column]));
                 }}
             }});
