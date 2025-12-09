@@ -442,14 +442,20 @@
                 panel.classList.add('hidden-panel');
             }
 
-            // Resize plot to take advantage of new space
-            setTimeout(() => {
-                const plotDiv = document.getElementById('plot');
-                if (plotDiv && plotDiv.data) {
-                    // Use Plotly.Plots.resize for proper dimension recalculation
-                    Plotly.Plots.resize(plotDiv);
-                }
-            }, 350); // Wait for CSS transition
+            // Force browser to recalculate layout, then resize plot
+            requestAnimationFrame(() => {
+                // Force reflow by reading offsetHeight
+                const container = document.querySelector('.container');
+                void(container.offsetHeight);
+
+                // Wait for CSS transition to complete, then resize
+                setTimeout(() => {
+                    const plotDiv = document.getElementById('plot');
+                    if (plotDiv && plotDiv.data) {
+                        Plotly.Plots.resize(plotDiv);
+                    }
+                }, 400); // Slightly longer delay to ensure panel is fully rendered
+            });
         }
 
         // Close settings panel when clicking outside
