@@ -150,14 +150,6 @@ html_content = f'''<!DOCTYPE html>
             height: fit-content;
             position: sticky;
             top: 20px;
-            transition: all 0.3s ease;
-        }}
-        .histogram-container.collapsed {{
-            width: 50px;
-            padding: 10px;
-        }}
-        .histogram-container.collapsed .histogram-content {{
-            display: none;
         }}
         .filters-container {{
             width: 280px;
@@ -168,44 +160,12 @@ html_content = f'''<!DOCTYPE html>
             height: fit-content;
             position: sticky;
             top: 20px;
-            transition: all 0.3s ease;
-        }}
-        .filters-container.collapsed {{
-            width: 50px;
-            padding: 10px;
-        }}
-        .filters-container.collapsed .filters-content {{
-            display: none;
-        }}
-        .panel-header {{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
         }}
         .panel-title {{
             font-size: 16px;
             font-weight: 600;
             color: #333;
-        }}
-        .collapse-btn {{
-            background: #f5f5f5;
-            border: none;
-            border-radius: 4px;
-            width: 30px;
-            height: 30px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            font-size: 16px;
-        }}
-        .collapse-btn:hover {{
-            background: #e0e0e0;
-        }}
-        .collapsed .collapse-btn {{
-            transform: rotate(180deg);
+            margin-bottom: 15px;
         }}
         .filter-section {{
             margin-bottom: 12px;
@@ -354,9 +314,84 @@ html_content = f'''<!DOCTYPE html>
             margin: 0 0 20px 0;
             font-size: 28px;
         }}
+        .settings-icon {{
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 22px;
+            transition: all 0.2s;
+            z-index: 1000;
+        }}
+        .settings-icon:hover {{
+            background: #f5f5f5;
+            transform: rotate(90deg);
+        }}
+        .settings-panel {{
+            position: fixed;
+            top: 75px;
+            right: 20px;
+            width: 250px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 20px;
+            z-index: 1000;
+            display: none;
+        }}
+        .settings-panel.active {{
+            display: block;
+        }}
+        .settings-title {{
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }}
+        .settings-option {{
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            cursor: pointer;
+        }}
+        .settings-option input[type="checkbox"] {{
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            margin-right: 10px;
+        }}
+        .settings-option label {{
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+            flex: 1;
+        }}
+        .hidden-panel {{
+            display: none !important;
+        }}
     </style>
 </head>
 <body>
+    <div class="settings-icon" onclick="toggleSettings()" title="Settings">⚙️</div>
+    <div class="settings-panel" id="settings-panel">
+        <div class="settings-title">Display Settings</div>
+        <div class="settings-option">
+            <input type="checkbox" id="show-histogram" checked onchange="togglePanelVisibility('histogram-panel', this.checked)">
+            <label for="show-histogram">Performance Distribution</label>
+        </div>
+        <div class="settings-option">
+            <input type="checkbox" id="show-filters" checked onchange="togglePanelVisibility('filters-panel', this.checked)">
+            <label for="show-filters">Filters</label>
+        </div>
+    </div>
     <h1>{chart_title}</h1>
     <div class="container">
         <div class="main-content">
@@ -374,21 +409,12 @@ html_content = f'''<!DOCTYPE html>
             </div>
         </div>
         <div class="histogram-container" id="histogram-panel">
-            <div class="panel-header">
-                <span class="panel-title">📊 Duration Distribution</span>
-                <button class="collapse-btn" onclick="togglePanel('histogram-panel')" title="Collapse">◀</button>
-            </div>
-            <div class="histogram-content">
-                <div id="histogram"></div>
-                <div class="percentile-info" id="percentile-info"></div>
-            </div>
+            <div class="panel-title">📊 Performance Distribution</div>
+            <div id="histogram"></div>
+            <div class="percentile-info" id="percentile-info"></div>
         </div>
         <div class="filters-container" id="filters-panel">
-            <div class="panel-header">
-                <span class="panel-title">🔍 Filters</span>
-                <button class="collapse-btn" onclick="togglePanel('filters-panel')" title="Collapse">◀</button>
-            </div>
-            <div class="filters-content">
+            <div class="panel-title">🔍 Filters</div>
             <div class="filter-section">
                 <h3 onclick="toggleSection(this)">📁 Dataset</h3>
                 <div class="filter-content">
@@ -412,9 +438,9 @@ html_content = f'''<!DOCTYPE html>
                 <br><br>
                 📊 Each dataset has its own viewport and filter options specific to that dataset.
                 <br><br>
-                📈 Histogram shows duration distribution with percentile markers.
+                📈 Performance Distribution shows duration with percentile markers (50th, 75th, 95th, 97th).
                 <br><br>
-                🔽 Click the collapse buttons to hide histogram or filters for full-screen chart view.
+                ⚙️ <strong>Click the gear icon</strong> (top right) to show/hide panels for full-screen chart view.
                 <br><br>
                 🖱️ Click data points to select them. Selected points appear in the table below the chart.
                 <br><br>
@@ -452,11 +478,31 @@ html_content = f'''<!DOCTYPE html>
             content.classList.toggle('collapsed');
         }}
 
-        // Toggle panel (histogram or filters) collapse/expand
-        function togglePanel(panelId) {{
-            const panel = document.getElementById(panelId);
-            panel.classList.toggle('collapsed');
+        // Toggle settings panel
+        function toggleSettings() {{
+            const settingsPanel = document.getElementById('settings-panel');
+            settingsPanel.classList.toggle('active');
         }}
+
+        // Toggle panel visibility
+        function togglePanelVisibility(panelId, isVisible) {{
+            const panel = document.getElementById(panelId);
+            if (isVisible) {{
+                panel.classList.remove('hidden-panel');
+            }} else {{
+                panel.classList.add('hidden-panel');
+            }}
+        }}
+
+        // Close settings panel when clicking outside
+        document.addEventListener('click', function(event) {{
+            const settingsPanel = document.getElementById('settings-panel');
+            const settingsIcon = document.querySelector('.settings-icon');
+
+            if (!settingsPanel.contains(event.target) && !settingsIcon.contains(event.target)) {{
+                settingsPanel.classList.remove('active');
+            }}
+        }});
 
         // Calculate percentiles from array of durations
         function calculatePercentiles(durations, percentiles) {{
