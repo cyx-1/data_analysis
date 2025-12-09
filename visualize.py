@@ -13,12 +13,13 @@ print(f"Found {len(csv_files)} CSV file(s):")
 for f in csv_files:
     print(f"  • {f.name}")
 
-# Read CSV files to extract metadata for filter options
+# Read CSV files and convert to JSON for embedding
 all_teams = set()
 all_titles = set()
 all_locations = set()
 all_users = set()
 csv_file_names = [f.name for f in csv_files]
+embedded_data = {}
 
 for csv_file in csv_files:
     df = pd.read_csv(csv_file)
@@ -26,6 +27,9 @@ for csv_file in csv_files:
     all_titles.update(df['title'].unique())
     all_locations.update(df['location'].unique())
     all_users.update(df['user_name'].unique())
+
+    # Convert DataFrame to list of dictionaries for embedding
+    embedded_data[csv_file.name] = df.to_dict('records')
 
 all_teams = sorted(all_teams)
 all_titles = sorted(all_titles)
@@ -40,7 +44,6 @@ html_content = f'''<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Workflow Execution Dashboard</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -269,7 +272,9 @@ html_content = f'''<!DOCTYPE html>
                 <br><br>
                 📊 Each dataset has its own viewport and filter options specific to that dataset.
                 <br><br>
-                ℹ️ To add more CSV files: Place them in this folder and run <code>uv run visualize.py</code> to regenerate.
+                ℹ️ To add more CSV files: Place them in this folder and run <code>uv run visualize.py</code> to regenerate the HTML.
+                <br><br>
+                ✨ CSV data is embedded - no web server required! Just open this HTML file in your browser.
             </div>
         </div>
     </div>
@@ -280,6 +285,9 @@ html_content = f'''<!DOCTYPE html>
         const TITLES = {json.dumps(all_titles)};
         const LOCATIONS = {json.dumps(all_locations)};
         const USERS = {json.dumps(all_users)};
+
+        // Embedded CSV data (no need for external file loading)
+        const EMBEDDED_DATA = {json.dumps(embedded_data)};
 
         const COLOR_PALETTE = [
             '#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00',
@@ -409,27 +417,19 @@ html_content = f'''<!DOCTYPE html>
             applyFilters();
         }}
 
-        // Load CSV files
-        async function loadCSVFiles() {{
-            const promises = CSV_FILES.map(file =>
-                new Promise((resolve, reject) => {{
-                    Papa.parse(file, {{
-                        download: true,
-                        header: true,
-                        dynamicTyping: false,
-                        complete: (results) => {{
-                            results.data.forEach(row => {{
-                                row._dataset = file;
-                            }});
-                            resolve(results.data);
-                        }},
-                        error: reject
+        // Load embedded data (synchronous, no need for external files)
+        function loadEmbeddedData() {{
+            // Process embedded data and tag with dataset name
+            allData = [];
+            CSV_FILES.forEach(csvFile => {{
+                const datasetData = EMBEDDED_DATA[csvFile];
+                if (datasetData) {{
+                    datasetData.forEach(row => {{
+                        row._dataset = csvFile;
+                        allData.push(row);
                     }});
-                }})
-            );
-
-            const results = await Promise.all(promises);
-            allData = results.flat().filter(row => row.timestamp); // Filter out empty rows
+                }}
+            }});
 
             // Calculate axis ranges and metadata per dataset
             CSV_FILES.forEach(csvFile => {{
@@ -574,23 +574,15 @@ html_content = f'''<!DOCTYPE html>
 
         // Initialize on page load
         initializeFilters();
-        loadCSVFiles().then(() => {{
-            // Update filters for first dataset after data is loaded
-            if (CSV_FILES.length > 0) {{
-                const datasetSelect = document.getElementById('dataset-select');
-                updateFiltersForDataset(datasetSelect.value || CSV_FILES[0]);
-            }}
-            applyFilters();
-            console.log('Dashboard loaded successfully');
-        }}).catch(error => {{
-            console.error('Error loading CSV files:', error);
-            document.getElementById('plot').innerHTML =
-                '<div style="padding: 40px; text-align: center; color: #d32f2f;">' +
-                '<h2>Error Loading Data</h2>' +
-                '<p>Could not load CSV files. Please ensure they are in the same directory as this HTML file.</p>' +
-                '<p style="font-family: monospace; font-size: 12px;">' + error + '</p>' +
-                '</div>';
-        }});
+        loadEmbeddedData();
+
+        // Update filters for first dataset after data is loaded
+        if (CSV_FILES.length > 0) {{
+            const datasetSelect = document.getElementById('dataset-select');
+            updateFiltersForDataset(datasetSelect.value || CSV_FILES[0]);
+        }}
+        applyFilters();
+        console.log('Dashboard loaded successfully');
     </script>
 </body>
 </html>'''
@@ -600,7 +592,7 @@ with open('workflow_dashboard.html', 'w', encoding='utf-8') as f:
     f.write(html_content)
 
 print("\n✓ Interactive dashboard created: workflow_dashboard.html")
-print(f"✓ CSV files to be loaded: {len(csv_file_names)}")
+print(f"✓ CSV data embedded from {len(csv_file_names)} file(s):")
 print(f"  • {', '.join(csv_file_names)}")
 print(f"\n✓ Filter options available:")
 print(f"  • Teams: {len(all_teams)} ({', '.join(all_teams)})")
@@ -609,18 +601,16 @@ print(f"  • Locations: {len(all_locations)} ({', '.join(all_locations)})")
 print(f"  • Users: {len(all_users)} ({', '.join(all_users)})")
 print("\nFeatures:")
 print("  • Multi-select filters on the right side")
-print("  • CSV files loaded dynamically (not embedded)")
-print("  • Select multiple teams, titles, locations, or datasets")
-print("  • Click 'Apply Filters' to update the visualization")
-print("  • Viewport stays fixed when filtering")
-print("  • Click legend to toggle individual users")
+print("  • CSV data embedded directly in HTML (no external files needed)")
+print("  • Dataset-specific filter options")
+print("  • Collapsible filter sections")
+print("  • Per-dataset viewport optimization")
+print("  • Dynamic filter updates (no apply button needed)")
 print("\n" + "="*60)
 print("  🚀 How to View the Dashboard")
 print("="*60)
-print("\nRun the local web server:")
-print("  uv run start_server.py")
-print("\nOr use Python's built-in server:")
-print("  python -m http.server 8000")
-print("  Then visit: http://localhost:8000/workflow_dashboard.html")
-print("\n⚠️  Don't open the HTML file directly - browsers will block CSV loading!")
+print("\n✨ Simply open the file in your browser:")
+print("  • Double-click workflow_dashboard.html")
+print("  • Or open it from your browser's File menu")
+print("\n✅ No web server required! Data is embedded in the HTML.")
 print("="*60)
