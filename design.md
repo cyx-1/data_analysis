@@ -392,7 +392,131 @@ filters:
 - **Trend analysis**: Use timestamp (X-axis) to see if violations increase over time
 - **Performance comparison**: Color by User, filter by SLA Status to see who meets SLA
 
-### 10. Embedded Data System
+### 10. Settings Panel & Display Controls
+
+**Overview**: Centralized gear icon settings for controlling panel visibility, with automatic plot resizing to maximize screen space.
+
+**Settings Icon UI**: `visualize.py:357-377`
+```css
+.settings-icon {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    cursor: pointer;
+    font-size: 22px;
+    z-index: 1000;
+}
+```
+
+**Settings Panel UI**: `visualize.py:378-389`
+```css
+.settings-panel {
+    position: fixed;
+    top: 75px;
+    right: 20px;
+    width: 250px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    padding: 20px;
+    z-index: 1000;
+    display: none;  /* Hidden by default */
+}
+```
+
+**HTML Structure**: `visualize.py:423-434`
+```html
+<div class="settings-icon" onclick="toggleSettings()">⚙️</div>
+<div class="settings-panel" id="settings-panel">
+    <div class="settings-title">Display Settings</div>
+    <div class="settings-option">
+        <input type="checkbox" id="show-histogram" checked
+               onchange="togglePanelVisibility('histogram-panel', this.checked)">
+        <label for="show-histogram">Performance Distribution</label>
+    </div>
+    <div class="settings-option">
+        <input type="checkbox" id="show-filters" checked
+               onchange="togglePanelVisibility('filters-panel', this.checked)">
+        <label for="show-filters">Filters</label>
+    </div>
+</div>
+```
+
+**Toggle Functions**: `visualize.py:481-512`
+```javascript
+// Toggle settings panel visibility
+function toggleSettings() {
+    const settingsPanel = document.getElementById('settings-panel');
+    settingsPanel.classList.toggle('active');
+}
+
+// Toggle panel visibility with plot resize
+function togglePanelVisibility(panelId, isVisible) {
+    const panel = document.getElementById(panelId);
+    if (isVisible) {
+        panel.classList.remove('hidden-panel');
+    } else {
+        panel.classList.add('hidden-panel');
+    }
+
+    // Force browser to recalculate layout, then resize plot
+    requestAnimationFrame(() => {
+        // Force reflow by reading offsetHeight
+        const container = document.querySelector('.container');
+        void(container.offsetHeight);
+
+        // Wait for CSS transition, then resize
+        setTimeout(() => {
+            const plotDiv = document.getElementById('plot');
+            if (plotDiv && plotDiv.data) {
+                Plotly.Plots.resize(plotDiv);  // Recalculate dimensions
+            }
+        }, 400);
+    });
+}
+```
+
+**Close-on-Click-Outside**: `visualize.py:504-512`
+```javascript
+document.addEventListener('click', function(event) {
+    const settingsPanel = document.getElementById('settings-panel');
+    const settingsIcon = document.querySelector('.settings-icon');
+
+    if (!settingsPanel.contains(event.target) &&
+        !settingsIcon.contains(event.target)) {
+        settingsPanel.classList.remove('active');
+    }
+});
+```
+
+**Plot Resize Mechanism**:
+1. **requestAnimationFrame**: Ensures code runs after current rendering frame
+2. **Force reflow**: Reading `offsetHeight` forces browser to complete layout recalculation
+3. **setTimeout(400ms)**: Waits for CSS transition to complete
+4. **Plotly.Plots.resize()**: Recalculates plot dimensions based on new container size
+
+**Key Features**:
+- Fixed position gear icon (always visible in top right)
+- Settings panel appears below gear icon
+- Checkboxes control histogram and filters visibility
+- Plot automatically expands when panels are hidden
+- Plot automatically shrinks when panels are shown
+- Smooth transitions (0.3s ease) for panel visibility
+- Click outside settings panel to close it
+
+**Benefits**:
+- Single control point for display settings
+- No spacing issues (panels use `display: none`)
+- Bidirectional plot resizing (expand and shrink)
+- Clean UI without multiple collapse buttons
+- Easy to extend with additional display options
+
+### 11. Embedded Data System
 
 **Why Embedded?**
 - No CORS issues
@@ -512,12 +636,21 @@ const EMBEDDED_DATA = {
 - SLA filter config: `chart.yaml:17-19`, `chart.yaml:43-45`
 - Data flow: generate_data.py → CSV → pandas → JSON → embedded HTML
 
+### Settings Panel & Display Controls
+- Settings icon CSS: `visualize.py:357-377`
+- Settings panel CSS: `visualize.py:378-389`
+- Settings HTML structure: `visualize.py:423-434`
+- Toggle settings function: `visualize.py:481-486`
+- Toggle panel visibility: `visualize.py:489-512`
+- Close on click outside: `visualize.py:504-512`
+- Plot resize mechanism: `visualize.py:497-510` (requestAnimationFrame + Plotly.Plots.resize)
+
 ### UI Components
-- Collapsible panels: `workflow_dashboard.html:446-449`
-- Collapse button: `visualize.py:377-379`, `visualize.py:387-389`
 - Dataset dropdown: `visualize.py:393-397`
 - Filter sections: `visualize.py:305-355`
 - Table container: `visualize.py:366-374`
+- Histogram panel: `visualize.py:411-415`
+- Filters panel: `visualize.py:416-417`
 
 ### Styling
 - Main layout: `visualize.py:68-79`
@@ -794,13 +927,16 @@ console.log('Chart config:', CHART_CONFIG);
 
 ## Version History
 
-### v1.1.0 - Current
+### v1.2.0 - Current
+- Centralized gear icon settings for display controls
+- Bidirectional plot resizing (expand and shrink automatically)
+- UTF-8 encoding support for emoji and international characters
+- Improved filter initialization (all selected by default)
 - Configurable color grouping (choose attribute for data point colors)
 - SLA tracking (expected_duration and is_sla_met columns)
 - YAML-based configuration
 - Multi-select data points with export
 - Dynamic histogram with percentiles
-- Collapsible panels
 - Dataset-specific configuration
 - Embedded data (no server required)
 

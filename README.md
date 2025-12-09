@@ -308,11 +308,16 @@ Configured in `chart.yaml` per dataset:
 - Instant updates (no apply button needed)
 - Dataset-specific filter options
 
-### 6. Collapsible Panels
+### 6. Settings & Display Controls
 
-- **Histogram**: Click ◀ to collapse/expand
-- **Filters**: Click ◀ to collapse/expand
-- Both collapsed = full-screen scatter plot view
+**⚙️ Gear Icon** (top right corner):
+- Click to open display settings panel
+- **Toggle visibility** of:
+  - Performance Distribution (histogram)
+  - Filters panel
+- **Scatter plot automatically resizes** to fill available space
+- Hide both panels for full-screen chart viewing
+- Smooth transitions when showing/hiding panels
 
 ### 7. Data Table & Export
 

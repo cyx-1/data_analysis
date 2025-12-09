@@ -372,6 +372,79 @@ filters:
 - **Trend analysis**: Use timestamp to see if violations increase over time
 - **Performance comparison**: Color by User, filter by SLA to see compliance rates
 
+### Task 9: Customize Settings Panel
+
+**Purpose**: Modify the gear icon settings panel to add/remove display options
+
+**When**: Need to add new toggleable panels or change settings behavior
+
+**Current Implementation**:
+- Gear icon in top right corner (⚙️)
+- Settings panel with checkboxes for Performance Distribution and Filters
+- Clicking checkbox toggles panel visibility
+- Plot automatically resizes when panels shown/hidden
+
+**Code Locations**:
+- Settings icon CSS: `visualize.py:357-377`
+- Settings panel CSS: `visualize.py:378-389`
+- Settings HTML: `visualize.py:423-434`
+- Toggle functions: `visualize.py:481-512`
+
+**Example: Add new toggleable panel**
+
+1. Add HTML checkbox in settings panel:
+```python
+# visualize.py:423-434
+<div class="settings-option">
+    <input type="checkbox" id="show-mytable" checked
+           onchange="togglePanelVisibility('mytable-panel', this.checked)">
+    <label for="show-mytable">My Custom Table</label>
+</div>
+```
+
+2. Create the panel with matching ID:
+```python
+<div class="mytable-container" id="mytable-panel">
+    <!-- Your content here -->
+</div>
+```
+
+3. Add CSS styling:
+```python
+# visualize.py - Add in <style> section
+.mytable-container {{
+    width: 280px;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    transition: opacity 0.3s ease;
+}}
+```
+
+4. No JavaScript changes needed! The existing `togglePanelVisibility()` function handles it automatically.
+
+**How Plot Resize Works**:
+1. User toggles checkbox → calls `togglePanelVisibility(panelId, isVisible)`
+2. Function adds/removes `hidden-panel` class (display: none)
+3. `requestAnimationFrame` ensures browser processes DOM change
+4. Force reflow by reading `container.offsetHeight`
+5. Wait 400ms for CSS transition
+6. Call `Plotly.Plots.resize()` to recalculate plot dimensions
+
+**Key Points**:
+- Always use `hidden-panel` class for hiding (not custom CSS)
+- Plot resize happens automatically via existing function
+- Settings panel closes when clicking outside
+- Checkboxes are checked by default (visible on load)
+
+**Testing**:
+```bash
+# After making changes
+uv run visualize.py
+open workflow_dashboard.html
+# Click gear icon and test new checkbox
+```
+
 ## Development Workflow
 
 ### Standard Workflow
@@ -456,6 +529,13 @@ open workflow_dashboard.html
 - Data generation: `generate_data.py:35-37`, `generate_data2.py:35-37`
 - Configuration: `chart.yaml:17-19`, `chart.yaml:43-45`
 - Complete flow: See `design.md` section 9
+
+**Settings Panel & Display Controls**:
+- Settings icon CSS: `visualize.py:357-377`
+- Settings panel HTML: `visualize.py:423-434`
+- Toggle functions: `visualize.py:481-512`
+- Plot resize: Uses `Plotly.Plots.resize()` with requestAnimationFrame
+- Complete details: See `design.md` section 10
 
 **Full code coordinates**: See `design.md`
 
