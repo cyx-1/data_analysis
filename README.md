@@ -17,6 +17,12 @@ A Tableau-like interactive data visualization tool for analyzing workflow execut
 - **Interactive Tools**: Zoom, pan, reset, and export to PNG
 - **Self-Contained**: HTML file works in any modern browser
 
+## Documentation
+
+- **[README.md](README.md)** (this file) - User guide and feature documentation
+- **[design.md](design.md)** - Technical architecture and code coordinates
+- **[agent.md](agent.md)** - AI agent guide for code modifications
+
 ## Prerequisites
 
 - Python 3.11+ (installed automatically by uv)
@@ -239,7 +245,9 @@ Move your mouse over any data point to see all its attributes
 
 ```
 data_analysis/
-├── README.md                  # This file
+├── README.md                  # This file - User guide
+├── design.md                  # Technical architecture and code coordinates
+├── agent.md                   # AI agent guide for development
 ├── chart.yaml                 # Dashboard configuration
 ├── pyproject.toml            # Project dependencies
 ├── uv.lock                   # Locked dependencies
@@ -411,6 +419,19 @@ datasets:
 6. **Multi-Select Power**: Select specific data points for detailed analysis
 7. **Percentiles**: Use histogram percentiles to identify outliers quickly
 8. **Filter Combinations**: Combine multiple filters for targeted analysis
+
+## Technical Documentation
+
+For developers and AI agents:
+- **[design.md](design.md)** - Detailed architecture, code coordinates, and implementation details
+- **[agent.md](agent.md)** - Guide for AI agents working with this codebase
+
+These documents provide:
+- Exact code coordinates for all features (file:line references)
+- Data flow diagrams
+- Extension points for new features
+- Common task workflows
+- Debugging guides
 
 ## License
 
